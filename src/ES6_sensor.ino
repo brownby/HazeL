@@ -317,17 +317,6 @@ void updateSampleSD()
   buttonISREn = true;
 }
 
-void readGps()
-{
-  while(Serial1.available() > 0)
-  {
-    if(gps.encode(Serial1.read()))
-    {
-      Serial.println("GPS data successfully encoded");
-    }
-  }
-}
-
 void blinkLed()
 {
   prevLedMillis = curMillis;
@@ -357,4 +346,37 @@ void connectWiFi()
   delay(500);
   digitalWrite(LED_BUILTIN, LOW);
   delay(500);
+}
+
+void readGps()
+{
+  while(Serial1.available() > 0)
+  {
+    if(gps.encode(Serial1.read()))
+    {
+      Serial.println("GPS data successfully encoded");
+    }
+  }
+}
+
+void sleepGps()
+{
+
+}
+
+void wakeGps()
+{
+  
+}
+
+byte createChecksum(char* cmd)
+{
+  byte checksum = 0;
+
+  for(int i = 0; i < strlen(cmd); i++)
+  {
+    checksum = checksum ^ cmd[i];
+  }
+
+  return checksum;
 }
