@@ -328,9 +328,6 @@ void updateThingSpeak()
 
     // shutoff WiFi
     WiFi.end();
-
-    
-
   }
 
   // TODO: write function here to update ThingSpeak with all the new values in CSV
@@ -476,11 +473,12 @@ bool httpRequest(char* buffer)
 {
   client.stop();
   char* data_length;
-  char post[] = "POST /channels/";
+  char* post;
   char* channelID;
   itoa(channelNumber, channelID, 10);
   itoa(strlen(buffer), data_length, 10);
 
+  strcpy(post, "POST /channels/");
   strcat(post, channelID);
   strcat(post, "/bulk_update.csv HTTP/1.1");
 
