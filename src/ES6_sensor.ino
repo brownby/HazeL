@@ -40,6 +40,7 @@ TinyGPSPlus gps;
 
 const uint32_t channelNumber = 1186416;
 const char writeApiKey[] = "IRCA839MQSQUAH59";
+const char server[] = "api.thingspeak.com";
 
 unsigned long prevSampMillis;
 unsigned long prevLedMillis;
@@ -65,11 +66,15 @@ uint8_t ledCount = 0;
 // particleData[11] = >10.0um
 uint16_t particleData[12];
 
-uint8_t buf[30]; // data buffer for I2C comms
+uint8_t i2c_buf[30]; // data buffer for I2C comms
+
+uint32_t lastLineRead = 0; // latest line that SD card was updated from
+char sd_buf[200]; // buffer to store single SD card line
+char tspeak_buf[2000];
 
 void buttonISR()
 {
-  if(buttonISREn = true)
+  if(buttonISREn == true)
   {
     wifiFlag = true;
     buttonISREn = false;
@@ -236,8 +241,95 @@ void loop() {
 
 }
 
+// updates to ThingSpeak in bulk updates of 2kB of data
 void updateThingSpeak()
 {
+  connectWiFi();
+
+  memset(tspeak_buf, 0, sizeof(tspeak_buf));
+  strcpy(tspeak_buf, "write_api_key=");
+  strcat(tspeak_buf, writeApiKey);
+  strcat(tspeak_buf, "&");
+  strcat(tspeak_buf, "time_format=absolute&updates=");
+
+  // Open file on SD card
+  dataFile = SD.open(dataFileName, FILE_READ);
+  if(dataFile)
+  {
+    uint32_t lineCount = 0;
+    // keep track of total number of characters read, use to cut off at 2000 bytes
+    // starts at 60 because of initial body parameters
+    uint32_t charCount = 60; 
+    uint32_t i = 0;
+    uint32_t linePosition = 0; // location in file of most recent line
+    
+    while(dataFile.available())
+    {
+      char c = dataFile.read();
+      charCount++;
+
+      // Every 2kB, send an update to thing speak
+      if(charCount >= 2000 && c != '\n')
+      {
+        httpRequest(tspeak_buf);
+
+        // reset byte counter and thingspeak buffer
+        charCount = 60;
+        memset(tspeak_buf, 0, sizeof(tspeak_buf));
+        strcpy(tspeak_buf, "write_api_key=");
+        strcat(tspeak_buf, writeApiKey);
+        strcat(tspeak_buf, "&");
+        strcat(tspeak_buf, "time_format=absolute&updates=");
+
+        // clear SD line buffer and move back to start of latest line
+        memset(sd_buf, 0, sizeof(sd_buf));
+        dataFile.seek(linePosition);
+
+        delay(20000); // can only update to Thingspeak every 15s
+      }
+      else if(c == '\n')
+      {
+        // on a new line, process data on line
+        i = 0;
+
+        // store position in file of the start of next line
+        linePosition = dataFile.position();
+
+        // first loop to line after the last from last update
+        if(lineCount++ <= lastLineRead)
+        {
+          // clear line buffer
+          memset(sd_buf, 0, sizeof(sd_buf));
+          continue;
+        }
+
+        // SD data is already formatted for ThingSpeak updates, just concatenate each line with pipe character in between
+        strcat(tspeak_buf, sd_buf);
+        strcat(tspeak_buf, "|"); // add pipe character between updates
+
+        memset(sd_buf, 0, sizeof(sd_buf));
+      }
+      else
+      {
+        // fill up buffer with characters read
+        sd_buf[i++] = c;
+      }
+    }
+
+    // store the latest line read for next update
+    // minus 1 because lineCount has been incremented, so at the end of the loop it's one line ahead
+    lastLineRead = lineCount - 1;
+
+    // update with the latest data
+    httpRequest(tspeak_buf);
+
+    // shutoff WiFi
+    WiFi.end();
+
+    
+
+  }
+
   // TODO: write function here to update ThingSpeak with all the new values in CSV
   // Need to note the timestamp when this submission happens, then store that time stamp and only update data that is after that time to ThingSpeak
   
@@ -259,12 +351,12 @@ void updateSampleSD()
     readGps();
   }
 
-  while(!readDustSensor(buf, 29))
+  while(!readDustSensor(i2c_buf, 29))
   {
     Serial.println("Sensor reading didn't work, trying again");
   }
 
-  if(!parseSensorData(particleData, buf))
+  if(!parseSensorData(particleData, i2c_buf))
   {
     Serial.println("checksum incorrect, data will be stale");
   }
@@ -373,8 +465,52 @@ void updateSampleSD()
   }
 
   sleepGps();
-  
+
   buttonISREn = true;
+}
+
+bool httpRequest(char* buffer)
+{
+  client.stop();
+  char* data_length;
+  char post[] = "POST /channels/";
+  char* channelID;
+  itoa(channelNumber, channelID, 10);
+  itoa(strlen(buffer), data_length, 10);
+
+  strcat(post, channelID);
+  strcat(post, "/bulk_update.csv HTTP/1.1");
+
+  if(client.connect(server, 80))
+  {
+    client.println(post);
+    client.println("Host: api.thingspeak.com");
+    client.println("Content-Type: application/x-www-form-urlencoded");
+    client.println("time_format: absolute");
+    client.println();
+    client.println(buffer);
+  }
+  else
+  {
+    Serial.println("Failed to connect to ThingSpeak");
+    return false;
+  }
+
+  delay(250);
+  client.parseFloat();
+  int resp = client.parseInt();
+  if(resp == 200)
+  {
+    Serial.println("Successful update");
+    return true;
+  }
+  else
+  {
+    Serial.print("Failed update, code: ");
+    Serial.println(resp);
+    return false;
+  }
+  
 }
 
 void blinkLed()
