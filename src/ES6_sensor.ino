@@ -3,7 +3,7 @@
  * 
  * Creates a file called "data.csv" on the SD card with columns for a time stamp and calculated particle concentration
  * 
- * Time stamp will be in seconds since the sensor was turned on
+ * Time stamp fwill be in seconds since the sensor was turned on
  * 
  * Code partially based on example here: https://www.mouser.com/datasheet/2/744/Seeed_101020012-1217636.pdf
  * 
