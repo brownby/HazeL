@@ -201,6 +201,8 @@ void setup() {
   // Button interrupt
   attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), buttonISR, RISING);
 
+  sleepGps();
+
   buttonISREn = true;
 }
 
@@ -220,7 +222,6 @@ void loop() {
   {
     updateSampleSD();
     Serial.println("Updated sample in SD card");
-    Serial.println(micros());
     Serial.println();
   }
 
@@ -245,6 +246,8 @@ void updateThingSpeak()
 void updateSampleSD()
 {
   buttonISREn = false;
+
+  wakeGps();
 
   prevSampMillis = curMillis;
 
@@ -369,6 +372,8 @@ void updateSampleSD()
     Serial.println("Couldn't open file");
   }
 
+  sleepGps();
+  
   buttonISREn = true;
 }
 
