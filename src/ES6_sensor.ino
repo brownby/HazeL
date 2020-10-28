@@ -319,6 +319,9 @@ void updateThingSpeak()
       }
     }
 
+    // close file
+    dataFile.close();
+
     // store the latest line read for next update
     // minus 1 because lineCount has been incremented, so at the end of the loop it's one line ahead
     lastLineRead = lineCount - 1;
@@ -329,10 +332,10 @@ void updateThingSpeak()
     // shutoff WiFi
     WiFi.end();
   }
-
-  // TODO: write function here to update ThingSpeak with all the new values in CSV
-  // Need to note the timestamp when this submission happens, then store that time stamp and only update data that is after that time to ThingSpeak
-  
+  else
+  {
+    Serial.println("unable to open file");
+  }
 }
 
 void updateSampleSD()
