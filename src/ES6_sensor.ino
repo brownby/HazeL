@@ -300,6 +300,9 @@ void updateThingSpeak()
         {
           // clear line buffer
           memset(sd_buf, 0, sizeof(sd_buf));
+
+          // reset charCounter (only want to count data we're actually sending)
+          charCount = 60;
           continue;
         }
 
