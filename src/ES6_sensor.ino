@@ -50,7 +50,6 @@ volatile bool buttonISREn = false;
 bool ledFlag = false;
 uint8_t ledCount = 0;
 
-
 // particleData[0]  = PM1.0, standard
 // particleData[1]  = PM2.5, standard
 // particleData[2]  = PM10.0, standard
@@ -160,7 +159,6 @@ void setup() {
   }
 
   // Create column titles in CSV if creating it
-  //    - column titles are time stamp, raw low pulse occupancy value, and calculated particle concentration in pcs/0.01cf
   // If CSV already exists, data will just be appended
   if(!SD.exists(dataFileName))
   {
@@ -417,17 +415,34 @@ void readGps()
 
 void sleepGps()
 {
-
+  sendGpsCommand("051,1");
 }
 
 void wakeGps()
 {
-  
+  sendGpsCommand("051,0");
 }
 
-byte createChecksum(char* cmd)
+void sendGpsCommand(const char* cmd)
 {
-  byte checksum = 0;
+  char* finalCmd; // final command to be sent to GPS module
+  char* initCmd = strcat("PGKC", cmd); // data between the $ and * - on which checksum is based
+  char checksum = createChecksum(initCmd);
+
+  finalCmd = strcat("$", initCmd);
+  strcat(finalCmd, "*");
+  strcat(finalCmd, &checksum);
+  strcat(finalCmd, "\r\n");
+
+  Serial1.write(finalCmd);
+  Serial.print("Command sent to GPS module: ");
+  Serial.println(finalCmd);
+
+}
+
+char createChecksum(char* cmd)
+{
+  char checksum = 0;
 
   for(int i = 0; i < strlen(cmd); i++)
   {
