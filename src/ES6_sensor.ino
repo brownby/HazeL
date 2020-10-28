@@ -14,7 +14,8 @@
  */
 
 #include "ThingSpeak.h"
-#include <WiFiNINA.h>
+// #include <WiFiNINA.h>
+#include <WiFi101.h>
 #include <SPI.h>
 #include <SD.h>
 #include <TinyGPS++.h>
@@ -425,18 +426,22 @@ void wakeGps()
 
 void sendGpsCommand(const char* cmd)
 {
-  char* finalCmd; // final command to be sent to GPS module
-  char* initCmd = strcat("PGKC", cmd); // data between the $ and * - on which checksum is based
-  char checksum = createChecksum(initCmd);
+  char cmdBase[] = "PGKC";
+  char* finalCmd = strcat(cmdBase, cmd); // data between the $ and * - on which checksum is based
+  char checksum = createChecksum(finalCmd);
 
-  finalCmd = strcat("$", initCmd);
-  strcat(finalCmd, "*");
-  strcat(finalCmd, &checksum);
-  strcat(finalCmd, "\r\n");
-
+  Serial1.write('$');
   Serial1.write(finalCmd);
+  Serial1.write('*');
+  Serial1.write(checksum);
+  Serial1.write("\r\n");
+  
   Serial.print("Command sent to GPS module: ");
-  Serial.println(finalCmd);
+  Serial.write('$');
+  Serial.write(finalCmd);
+  Serial.write('*');
+  Serial.print(checksum, HEX);
+  Serial.write("\r\n");
 
 }
 
