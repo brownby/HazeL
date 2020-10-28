@@ -511,6 +511,8 @@ bool httpRequest(char* buffer)
     Serial.println(resp);
     return false;
   }
+
+  client.stop();
   
 }
 
