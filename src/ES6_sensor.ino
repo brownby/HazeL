@@ -14,6 +14,7 @@
  */
 
 #include "ThingSpeak.h"
+#include <U8g2lib.h>
 // #include <WiFiNINA.h>
 #include <WiFi101.h>
 #include <SPI.h>
@@ -37,6 +38,8 @@ File dataFile;
 String dataFileName = "datadump.csv";
 
 TinyGPSPlus gps;
+
+U8G2_SSD1306_128X64_ALT0_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 
 const uint32_t channelNumber = 1186416;
 const char writeApiKey[] = "IRCA839MQSQUAH59";
@@ -71,71 +74,6 @@ uint8_t i2c_buf[30]; // data buffer for I2C comms
 uint32_t lastLineRead = 0; // latest line that SD card was updated from
 char sd_buf[200]; // buffer to store single SD card line
 char tspeak_buf[2000];
-
-void buttonISR()
-{
-  if(buttonISREn == true)
-  {
-    wifiFlag = true;
-    buttonISREn = false;
-  }
-}
-
-bool initDustSensor()
-{
-  bool initSuccess;
-  Wire.beginTransmission(SENSOR_ADDR);
-  Wire.write(0x88); // select command
-  initSuccess = Wire.endTransmission();
-  // endTransmission() returns 0 on a success
-
-  return !initSuccess;
-}
-
-// return false on a timeout of 10ms
-bool readDustSensor(uint8_t *data, uint32_t data_len)
-{
-  uint32_t timeOutCnt = 0;
-  Wire.requestFrom(SENSOR_ADDR, 29);
-  while(data_len != Wire.available())
-  {
-    timeOutCnt++;
-    if(timeOutCnt > 10) return false;
-    delay(1);
-  }
-  for(int i = 0; i < data_len; i++)
-  {
-    data[i] = Wire.read();
-  }
-  return true;
-}
-
-// moves raw data read from I2C bus into decoded buffer (particleData in this sketch)
-// returns false if checksum is invalid (and doesn't parse data, i.e. data_out will not change)
-bool parseSensorData(uint16_t *data_out, uint8_t *data_raw)
-{
-  int j = 0;
-  byte sum = 0;
-
-  for(int i = 0; i < 28; i++)
-  {
-    sum += data_raw[i];
-  }
-
-  // wrong checksum
-  if(sum != data_raw[28])
-  {
-    return false;
-  }
-  
-  for(int i = 4; i <=26 ; i += 2)
-  {
-    data_out[j] = (data_raw[i] << 8) | (data_raw[i+1]);
-    j++;
-  }
-
-  return true;
-}
 
 void setup() {
   // initialize Serial port
@@ -241,6 +179,73 @@ void loop() {
 
 }
 
+// ISR for button being pressed
+void buttonISR()
+{
+  if(buttonISREn == true)
+  {
+    wifiFlag = true;
+    buttonISREn = false;
+  }
+}
+
+// sends initial command to dust sensor 
+bool initDustSensor()
+{
+  bool initSuccess;
+  Wire.beginTransmission(SENSOR_ADDR);
+  Wire.write(0x88); // select command
+  initSuccess = Wire.endTransmission();
+  // endTransmission() returns 0 on a success
+
+  return !initSuccess;
+}
+
+// return false on a timeout of 10ms
+bool readDustSensor(uint8_t *data, uint32_t data_len)
+{
+  uint32_t timeOutCnt = 0;
+  Wire.requestFrom(SENSOR_ADDR, 29);
+  while(data_len != Wire.available())
+  {
+    timeOutCnt++;
+    if(timeOutCnt > 10) return false;
+    delay(1);
+  }
+  for(int i = 0; i < data_len; i++)
+  {
+    data[i] = Wire.read();
+  }
+  return true;
+}
+
+// moves raw data read from I2C bus into decoded buffer (particleData in this sketch)
+// returns false if checksum is invalid (and doesn't parse data, i.e. data_out will not change)
+bool parseSensorData(uint16_t *data_out, uint8_t *data_raw)
+{
+  int j = 0;
+  byte sum = 0;
+
+  for(int i = 0; i < 28; i++)
+  {
+    sum += data_raw[i];
+  }
+
+  // wrong checksum
+  if(sum != data_raw[28])
+  {
+    return false;
+  }
+  
+  for(int i = 4; i <=26 ; i += 2)
+  {
+    data_out[j] = (data_raw[i] << 8) | (data_raw[i+1]);
+    j++;
+  }
+
+  return true;
+}
+
 // updates to ThingSpeak in bulk updates of 2kB of data
 void updateThingSpeak()
 {
@@ -338,6 +343,7 @@ void updateThingSpeak()
   }
 }
 
+// update samples in SD card
 void updateSampleSD()
 {
   buttonISREn = false;
@@ -472,6 +478,7 @@ void updateSampleSD()
   buttonISREn = true;
 }
 
+// form HTTP request for bulk updates
 bool httpRequest(char* buffer)
 {
   client.stop();
@@ -519,6 +526,7 @@ bool httpRequest(char* buffer)
   
 }
 
+// blink LED
 void blinkLed()
 {
   prevLedMillis = curMillis;
@@ -532,6 +540,7 @@ void blinkLed()
   }
 }
 
+// connect to WiFi
 void connectWiFi()
 {
     // Initialize WiFi 
@@ -550,6 +559,7 @@ void connectWiFi()
   delay(500);
 }
 
+// read GPS module and encode data
 void readGps()
 {
   while(Serial1.available() > 0)
@@ -561,16 +571,19 @@ void readGps()
   }
 }
 
+// sleep the GPS module
 void sleepGps()
 {
   sendGpsCommand("051,1");
 }
 
+// wake up the GPS module
 void wakeGps()
 {
   sendGpsCommand("051,0");
 }
 
+// send GPS command
 void sendGpsCommand(const char* cmd)
 {
   char cmdBase[] = "PGKC";
@@ -592,6 +605,7 @@ void sendGpsCommand(const char* cmd)
 
 }
 
+// create a checksum for GPS command
 char createChecksum(char* cmd)
 {
   char checksum = 0;
@@ -602,4 +616,13 @@ char createChecksum(char* cmd)
   }
 
   return checksum;
+}
+
+// function for displaying characters to OLED 
+void display(const char* text)
+{
+  u8g2.clearBuffer();
+  u8g2.setFont(u8g2_font_ncenB08_tr); // TODO: look into other fonts
+  u8g2.drawStr(0, 10, text);
+  u8g2.sendBuffer();
 }
