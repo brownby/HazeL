@@ -574,15 +574,13 @@ void readGps()
 // sleep the GPS module
 void sleepGps()
 {
-  sendGpsCommand("051,1");
-  // sendGpsCommand("105,8");
+  sendGpsCommand("105,8");
 }
 
 // wake up the GPS module
 void wakeGps()
 {
-  sendGpsCommand("051,0");
-  // sendGpsCommand("105,0");
+  sendGpsCommand("105,0");
 }
 
 // send GPS command
