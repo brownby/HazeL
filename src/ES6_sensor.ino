@@ -170,7 +170,7 @@ void loop() {
 
   if(wifiFlag)
   {
-    updateThingSpeak();
+    // updateThingSpeak();
     Serial.println("Updated to ThingSpeak");
     Serial.println();
     wifiFlag = false;
@@ -575,12 +575,14 @@ void readGps()
 void sleepGps()
 {
   sendGpsCommand("051,1");
+  // sendGpsCommand("105,8");
 }
 
 // wake up the GPS module
 void wakeGps()
 {
   sendGpsCommand("051,0");
+  // sendGpsCommand("105,0");
 }
 
 // send GPS command
@@ -593,7 +595,7 @@ void sendGpsCommand(const char* cmd)
   Serial1.write('$');
   Serial1.write(finalCmd);
   Serial1.write('*');
-  Serial1.write(checksum);
+  Serial1.print(checksum, HEX);
   Serial1.write("\r\n");
   
   Serial.print("Command sent to GPS module: ");
