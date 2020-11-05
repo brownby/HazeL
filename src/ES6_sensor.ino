@@ -84,6 +84,8 @@ void setup() {
 
   Wire.begin();
 
+  u8g2.begin();
+
   // Set sensor pin as input
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(BUTTON_PIN, INPUT);
@@ -466,6 +468,28 @@ void updateSampleSD()
     dataFile.println(",");
     dataFile.close();
 
+    char displayText[50];
+    char pm1p0Text[10];
+    char pm2p5Text[10];
+    char pm10p0Text[10];
+    itoa(particleData[3], pm1p0Text, 10);
+    itoa(particleData[4], pm2p5Text, 10);
+    itoa(particleData[5], pm10p0Text, 10);
+    strcpy(displayText, "PM1.0: ");
+    strcat(displayText, pm1p0Text);
+    strcat(displayText, " ug/m\xb3");
+    display(displayText, 10, true);
+
+    strcpy(displayText, "PM2.5: ");
+    strcat(displayText, pm2p5Text);
+    strcat(displayText, " ug/m\xb3");
+    display(displayText, 20, false);
+
+    strcpy(displayText, "PM10.0: ");
+    strcat(displayText, pm10p0Text);
+    strcat(displayText, " ug/m\xb3");
+    display(displayText, 30, false);
+
     ledFlag = true;
   }
   else
@@ -619,10 +643,14 @@ char createChecksum(char* cmd)
 }
 
 // function for displaying characters to OLED 
-void display(const char* text)
+void display(char* text, u8g2_uint_t height, bool clear)
 {
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_ncenB08_tr); // TODO: look into other fonts
-  u8g2.drawStr(0, 10, text);
+  if(clear)
+  {
+    u8g2.clearBuffer();
+  }
+ 
+  u8g2.setFont(u8g2_font_ncenB08_tf); // TODO: look into other fonts
+  u8g2.drawStr(0, height, text);
   u8g2.sendBuffer();
 }
