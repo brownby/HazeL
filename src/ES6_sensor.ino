@@ -539,6 +539,10 @@ void updateSampleSD()
       strcat(timeText, "0");
     }
     strcat(timeText, minuteText);
+    if(gps.time.age() >= 1500)
+    {
+      strcat(timeText, "(!)");
+    }
     display(timeText, 32, false, true);
 
     ledFlag = true;
