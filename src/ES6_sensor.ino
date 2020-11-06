@@ -528,8 +528,16 @@ void updateSampleSD()
     strcat(timeText, "/");
     strcat(timeText, yearText);
     strcat(timeText, " ");
+    if(gps.time.hour() < 10)
+    {
+      strcat(timeText, "0");
+    }
     strcat(timeText, hourText);
     strcat(timeText, ":");
+    if(gps.time.minute() < 10)
+    {
+      strcat(timeText, "0");
+    }
     strcat(timeText, minuteText);
     display(timeText, 32, false, true);
 
