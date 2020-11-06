@@ -20,6 +20,7 @@
 #include <SPI.h>
 #include <SD.h>
 #include <TinyGPS++.h>
+#include <TimeLib.h>
 #include <Wire.h>
 
 #define SAMP_TIME 5000 // in milliseconds, sensor updates every 1 second, read it every 5
@@ -478,17 +479,17 @@ void updateSampleSD()
     strcpy(displayText, "PM1.0: ");
     strcat(displayText, pm1p0Text);
     strcat(displayText, " ug/m\xb3");
-    display(displayText, 10, true);
+    display(displayText, 10, true, false);
 
     strcpy(displayText, "PM2.5: ");
     strcat(displayText, pm2p5Text);
     strcat(displayText, " ug/m\xb3");
-    display(displayText, 20, false);
+    display(displayText, 20, false, false);
 
     strcpy(displayText, "PM10.0: ");
     strcat(displayText, pm10p0Text);
     strcat(displayText, " ug/m\xb3");
-    display(displayText, 30, false);
+    display(displayText, 30, false, true);
 
     ledFlag = true;
   }
@@ -643,14 +644,19 @@ char createChecksum(char* cmd)
 }
 
 // function for displaying characters to OLED 
-void display(char* text, u8g2_uint_t height, bool clear)
+void display(char* text, u8g2_uint_t height, bool clear, bool send)
 {
   if(clear)
   {
     u8g2.clearBuffer();
   }
  
-  u8g2.setFont(u8g2_font_ncenB08_tf); // TODO: look into other fonts
+  u8g2.setFont(u8g2_font_helvB08_tf); // TODO: look into other fonts
   u8g2.drawStr(0, height, text);
   u8g2.sendBuffer();
+
+  if(send)
+  {
+    u8g2.sendBuffer();
+  }
 }
