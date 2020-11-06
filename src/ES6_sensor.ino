@@ -398,9 +398,6 @@ void updateSampleSD()
     if(gps.time.second() < 10) Serial.print("0");
     Serial.print(gps.time.second());
     Serial.println(": ");
-    Serial.println(gps.time.age());
-    Serial.println(gps.date.age());
-    Serial.println(gps.location.age());
     
     Serial.print("PM1.0 (standard): "); Serial.print(particleData[0]); Serial.println(" ug/m^3");
     Serial.print("PM2.5 (standard): "); Serial.print(particleData[1]); Serial.println(" ug/m^3");
