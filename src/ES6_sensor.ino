@@ -483,12 +483,12 @@ void updateSampleSD()
       itoa(particleData[3], pm1p0Text, 10);
       itoa(particleData[4], pm2p5Text, 10);
       itoa(particleData[5], pm10p0Text, 10);
-      strcpy(displayText, "PM1.0: ");
+      strcpy(displayText, "PM1.0:   ");
       strcat(displayText, pm1p0Text);
       strcat(displayText, " ug/m\xb3");
       display(displayText, 10, true, false);
 
-      strcpy(displayText, "PM2.5: ");
+      strcpy(displayText, "PM2.5:   ");
       strcat(displayText, pm2p5Text);
       strcat(displayText, " ug/m\xb3");
       display(displayText, 20, false, false);
