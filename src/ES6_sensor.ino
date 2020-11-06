@@ -20,7 +20,6 @@
 #include <SPI.h>
 #include <SD.h>
 #include <TinyGPS++.h>
-#include <TimeLib.h>
 #include <Wire.h>
 
 #define SAMP_TIME 5000 // in milliseconds, sensor updates every 1 second, read it every 5
@@ -30,8 +29,6 @@
 #define BUTTON_PIN 7
 #define SD_CS_PIN 4
 #define SENSOR_ADDR 0x40
-
-time_t prevUpdate; 
 
 char ssid[] = "Landfall";
 char password[] = "slosilo!";
