@@ -97,17 +97,21 @@ void setup() {
   if(!SD.begin(SD_CS_PIN))
   {
     Serial.println("Card failed");
+    display("SD card failed", 16, true, false);
+    display("Reset device", 24, false, true);
     while(true);
   }
   else
   {
     Serial.println("Card initialized successfully");
+    display("SD card detected", 20, true, true);
   }
 
   // Create column titles in CSV if creating it
   // If CSV already exists, data will just be appended
   if(!SD.exists(dataFileName))
   {
+    display("Creating .csv", 16, true, true);
     dataFile = SD.open(dataFileName, FILE_WRITE);
     if(dataFile)
     {
@@ -140,6 +144,7 @@ void setup() {
   if(!initDustSensor())
   {
     Serial.println("Failed to initialize dust sensor");
+    display("Dust sensor init failed", 20, true, true);
     while(true);
   }
 
