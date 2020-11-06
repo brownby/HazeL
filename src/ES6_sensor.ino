@@ -477,26 +477,51 @@ void updateSampleSD()
       dataFile.close();
 
       char displayText[50];
+      char timeText[50];
       char pm1p0Text[10];
       char pm2p5Text[10];
       char pm10p0Text[10];
+      char hourText[10];
+      char minuteText[10];
+      char monthText[10];
+      char dayText[10];
+      char yearText[10];
+
       itoa(particleData[3], pm1p0Text, 10);
       itoa(particleData[4], pm2p5Text, 10);
       itoa(particleData[5], pm10p0Text, 10);
-      strcpy(displayText, "PM1.0:   ");
+
+      itoa(gps.time.hour(), hourText, 10);
+      itoa(gps.time.minute(), minuteText, 10);
+      itoa(gps.date.month(), monthText, 10);
+      itoa(gps.date.day(), dayText, 10);
+      itoa(gps.date.year(), yearText, 10);
+
+      strcpy(displayText, "PM1.0:  ");
       strcat(displayText, pm1p0Text);
       strcat(displayText, " ug/m\xb3");
-      display(displayText, 10, true, false);
+      display(displayText, 8, true, false);
 
-      strcpy(displayText, "PM2.5:   ");
+      strcpy(displayText, "PM2.5:  ");
       strcat(displayText, pm2p5Text);
       strcat(displayText, " ug/m\xb3");
-      display(displayText, 20, false, false);
+      display(displayText, 16, false, false);
 
       strcpy(displayText, "PM10.0: ");
       strcat(displayText, pm10p0Text);
       strcat(displayText, " ug/m\xb3");
-      display(displayText, 30, false, true);
+      display(displayText, 24, false, false);
+
+      strcpy(timeText, monthText);
+      strcat(timeText, "/");
+      strcat(timeText, dayText);
+      strcat(timeText, "/");
+      strcat(timeText, yearText);
+      strcat(timeText, " ");
+      strcat(timeText, hourText);
+      strcat(timeText, ":");
+      strcat(timeText, minuteText);
+      display(timeText, 32, false, true);
 
       ledFlag = true;
     }
@@ -659,7 +684,8 @@ void display(char* text, u8g2_uint_t height, bool clear, bool send)
     u8g2.clearBuffer();
   }
  
-  u8g2.setFont(u8g2_font_helvB08_tf); // TODO: look into other fonts
+  // u8g2.setFont(u8g2_font_helvB08_tf); // TODO: look into other fonts
+  u8g2.setFont(u8g2_font_synchronizer_nbp_tf);
   u8g2.drawStr(0, height, text);
   u8g2.sendBuffer();
 
