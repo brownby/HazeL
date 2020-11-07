@@ -442,7 +442,7 @@ void updateSampleSD()
 
   setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
 
-  if(now() >= prevTimeStamp)
+  if(now() != prevTimeStamp)
   {
     Serial.println("Fresh timestamp");
     prevTimeStamp = now();
