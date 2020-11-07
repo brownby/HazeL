@@ -15,7 +15,6 @@
 
 #include "ThingSpeak.h"
 #include <U8g2lib.h>
-// #include <WiFiNINA.h>
 #include <WiFi101.h>
 #include <SPI.h>
 #include <SD.h>
@@ -350,12 +349,11 @@ void updateThingSpeak()
           }
           status_buf[j++] = sd_buf[k];
         }
-        Serial.println(sd_buf);
-        Serial.print("status: ");
-        Serial.println(status_buf);
-
-        // if(status_buf == "good")
-        // {
+        
+        // if GPS time stamp isn't stale, include in tspeak_buf (data to be sent to thingspeak)
+        if(status_buf[0] == 'g')
+        {
+          Serial.println("Updating thingspeak buffer");
           // SD data is already formatted for ThingSpeak updates, just concatenate each line with pipe character in between
           
           // Remove columns for standard PM data and 0.5um particles
@@ -384,7 +382,7 @@ void updateThingSpeak()
           // strcat(tspeak_buf, sd_buf);
           // strcat(tspeak_buf, "|"); // add pipe character between updates
           charCount += lineCharCount + 1;
-        // }
+        }
 
         lineCharCount = 0;
         memset(sd_buf, 0, sizeof(sd_buf));
