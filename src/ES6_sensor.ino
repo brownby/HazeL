@@ -263,7 +263,6 @@ bool parseSensorData(uint16_t *data_out, uint8_t *data_raw)
 // updates to ThingSpeak in bulk updates of 2kB of data
 void updateThingSpeak()
 {
-  // connectWiFi();
   prevWiFiMillis = curMillis;
 
   memset(tspeak_buf, 0, sizeof(tspeak_buf));
@@ -633,6 +632,8 @@ void updateSampleSD()
 // form HTTP request for bulk updates
 bool httpRequest(char* buffer)
 {
+  connectWiFi();
+
   client.stop();
   char* data_length;
   char* post;
