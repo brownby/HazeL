@@ -39,6 +39,8 @@ File dataFile;
 String dataFileName = "datatest.csv";
 
 TinyGPSPlus gps;
+time_t prevTimeStamp;
+bool staleFlag = false;
 
 U8G2_SSD1306_128X64_ALT0_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 
@@ -78,7 +80,6 @@ uint32_t lastLineRead = 0; // latest line that SD card was updated from
 char sd_buf[200]; // buffer to store single SD card line
 char tspeak_buf[2500];
 char status_buf[20]; // buffer for status text
-const char pipeChar[] = "|";
 uint8_t colPositions[17] = {0}; // array to store indices of commas in sd_buf, indicating column delineations
 
 void setup() {
@@ -439,6 +440,21 @@ void updateSampleSD()
     readGps();
   }
 
+  setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
+
+  if(now() >= prevTimeStamp)
+  {
+    Serial.println("Fresh timestamp");
+    prevTimeStamp = now();
+    staleFlag = false;
+  }
+  else
+  {
+    Serial.println("Stale timestamp");
+    staleFlag = true;
+  }
+  
+
   while(!readDustSensor(i2c_buf, 29))
   {
     Serial.println("Sensor reading didn't work, trying again");
@@ -492,18 +508,7 @@ void updateSampleSD()
     Serial.print(gps.location.lng(), 2);
     Serial.print(", alt: ");
     Serial.println(gps.altitude.meters(), 2);
-
-    if(gps.time.age() <= 1500)
-    {
-      Serial.println("gps time fresh");
-    }
-    else
-    {
-      Serial.print("gps time stale: ");
-      Serial.println(gps.time.age());
-    }
     
-
     // Update data.csv with the same information
     
     // use ISO 8601 format for timestamp
@@ -552,13 +557,13 @@ void updateSampleSD()
     dataFile.print(",");
     dataFile.print(int(gps.altitude.meters()));
     dataFile.print(",");
-    if(gps.time.age() <= 1500)
+    if(staleFlag)
     {
-      dataFile.println("good");
+      dataFile.println("stale gps");
     }
     else
     {
-      dataFile.println("stale gps");
+      dataFile.println("good");
     }
     dataFile.close();
 
