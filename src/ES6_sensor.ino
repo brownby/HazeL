@@ -35,7 +35,7 @@ char password[] = "slosilo!";
 WiFiClient client;
 
 File dataFile;
-String dataFileName = "datawifi.csv";
+String dataFileName = "datatest.csv";
 
 TinyGPSPlus gps;
 
@@ -349,7 +349,8 @@ void updateThingSpeak()
           }
           status_buf[j++] = sd_buf[k];
         }
-        
+        Serial.println(sd_buf);
+
         // if GPS time stamp isn't stale, include in tspeak_buf (data to be sent to thingspeak)
         if(status_buf[0] == 'g')
         {
@@ -378,7 +379,6 @@ void updateThingSpeak()
             sd_buf[k] = sd_buf[k + cntsColDel]; // do the same to get rid of the 0.5um column
           }
 
-          Serial.println(sd_buf);
           // strcat(tspeak_buf, sd_buf);
           // strcat(tspeak_buf, "|"); // add pipe character between updates
           charCount += lineCharCount + 1;
