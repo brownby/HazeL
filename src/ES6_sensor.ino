@@ -20,6 +20,7 @@
 #include <SD.h>
 #include <TinyGPS++.h>
 #include <Wire.h>
+#include <TimeLib.h>
 
 #define SAMP_TIME 5000 // in milliseconds, sensor updates every 1 second, read it every 5
 #define WIFI_TIME 30000 // wifi updates every 30 seconds
@@ -75,8 +76,9 @@ uint8_t i2c_buf[30]; // data buffer for I2C comms
 bool firstLineDone = false; // flag for first line (titles) having been read
 uint32_t lastLineRead = 0; // latest line that SD card was updated from
 char sd_buf[200]; // buffer to store single SD card line
-char tspeak_buf[2000];
+char tspeak_buf[2500];
 char status_buf[20]; // buffer for status text
+const char pipeChar[] = "|";
 uint8_t colPositions[17] = {0}; // array to store indices of commas in sd_buf, indicating column delineations
 
 void setup() {
@@ -288,10 +290,11 @@ void updateThingSpeak()
       char c = dataFile.read();
 
       // Every 2kB, send an update to thing speak
-      if(charCount >= sizeof(tspeak_buf) && c != '\n')
+      if((charCount >= sizeof(tspeak_buf) - 500) && (c != '\n'))
       {
         Serial.println("Buffer full!");
         Serial.println(charCount);
+        tspeak_buf[strlen(tspeak_buf) - 1] = 0; // remove last pipe character
         httpRequest(tspeak_buf);
 
         // reset byte counter and thingspeak buffer
@@ -377,9 +380,11 @@ void updateThingSpeak()
             sd_buf[k] = sd_buf[k + cntsColDel]; // do the same to get rid of the 0.5um column
           }
 
-          // strcat(tspeak_buf, sd_buf);
-          // strcat(tspeak_buf, "|"); // add pipe character between updates
-          charCount += lineCharCount + 1;
+          // remove newline from the end of the line
+          sd_buf[strlen(sd_buf) - 1] = 0;
+          strcat(tspeak_buf, sd_buf);
+          strcat(tspeak_buf, "|"); // add pipe character between updates
+          charCount += lineCharCount;
         }
 
         lineCharCount = 0;
@@ -406,7 +411,7 @@ void updateThingSpeak()
 
     // update with the latest data
     // httpRequest(tspeak_buf);
-
+    firstLineDone = false;
     // shutoff WiFi
     WiFi.end();
     Serial.println("Turning off WiFi");
@@ -634,9 +639,9 @@ bool httpRequest(char* buffer)
   connectWiFi();
 
   client.stop();
-  char* data_length;
-  char* post;
-  char* channelID;
+  char data_length[10];
+  char post[200];
+  char channelID[10];
   itoa(channelNumber, channelID, 10);
   itoa(strlen(buffer), data_length, 10);
 
@@ -647,11 +652,16 @@ bool httpRequest(char* buffer)
   if(client.connect(server, 80))
   {
     client.println(post);
+    Serial.println(post);
     client.println("Host: api.thingspeak.com");
+    Serial.println("Host: api.thingspeak.com");
     client.println("Content-Type: application/x-www-form-urlencoded");
-    client.println("time_format: absolute");
+    Serial.println("Content-Type: application/x-www-form-urlencoded");
+    // client.println("time_format: absolute");
     client.println();
+    Serial.println();
     client.println(buffer);
+    Serial.println(buffer);
   }
   else
   {
@@ -665,17 +675,16 @@ bool httpRequest(char* buffer)
   if(resp == 200)
   {
     Serial.println("Successful update");
+    client.stop();
     return true;
   }
   else
   {
     Serial.print("Failed update, code: ");
     Serial.println(resp);
+    client.stop();
     return false;
   }
-
-  client.stop();
-  
 }
 
 // blink LED
