@@ -78,7 +78,7 @@ uint8_t i2c_buf[30]; // data buffer for I2C comms
 bool firstLineDone = false; // flag for first line (titles) having been read
 uint32_t lastLineRead = 0; // latest line that SD card was updated from
 char sd_buf[200]; // buffer to store single SD card line
-char tspeak_buf[2500];
+char tspeak_buf[5000];
 char status_buf[20]; // buffer for status text
 uint8_t colPositions[17] = {0}; // array to store indices of commas in sd_buf, indicating column delineations
 
@@ -291,7 +291,7 @@ void updateThingSpeak()
       char c = dataFile.read();
 
       // Every 2kB, send an update to thing speak
-      if((charCount >= sizeof(tspeak_buf) - 500) && (c != '\n'))
+      if((charCount >= 2000) && (c != '\n'))
       {
         Serial.println("Buffer full!");
         Serial.println(charCount);
@@ -351,7 +351,6 @@ void updateThingSpeak()
           }
           status_buf[j++] = sd_buf[k];
         }
-        Serial.println(sd_buf);
 
         // if GPS time stamp isn't stale, include in tspeak_buf (data to be sent to thingspeak)
         if(status_buf[0] == 'g')
@@ -380,9 +379,10 @@ void updateThingSpeak()
           {
             sd_buf[k] = sd_buf[k + cntsColDel]; // do the same to get rid of the 0.5um column
           }
-
+          Serial.println(sd_buf);
           // remove newline from the end of the line
-          sd_buf[strlen(sd_buf) - 1] = 0;
+          // sd_buf[strlen(sd_buf) - 1] = 0;
+          // Serial.println(sd_buf);
           strcat(tspeak_buf, sd_buf);
           strcat(tspeak_buf, "|"); // add pipe character between updates
           charCount += lineCharCount;
@@ -648,11 +648,38 @@ bool httpRequest(char* buffer)
   char post[200];
   char channelID[10];
   itoa(channelNumber, channelID, 10);
-  itoa(strlen(buffer), data_length, 10);
 
   strcpy(post, "POST /channels/");
   strcat(post, channelID);
   strcat(post, "/bulk_update.csv HTTP/1.1");
+
+  // URL encode string
+  for(int i = 0; i < strlen(buffer); i++)
+  {
+    if(buffer[i] == ',')
+    {
+      // move everything else past this point two spaces to the right
+      for(int j = strlen(buffer) + 1; j > i; j--)
+      {
+        buffer[j] = buffer[j-2];
+      }
+      buffer[i] = '%';
+      buffer[i+1] = '2';
+      buffer[i+2] = 'C';
+    }
+    else if(buffer[i] == '|')
+    {
+      for(int j = strlen(buffer) + 1; j > i; j--)
+      {
+        buffer[j] = buffer[j-2];
+      }
+      buffer[i] = '%';
+      buffer[i+1] = '7';
+      buffer[i+2] = 'C';
+    }
+  }
+
+  itoa(strlen(buffer), data_length, 10);
 
   if(client.connect(server, 80))
   {
@@ -662,7 +689,10 @@ bool httpRequest(char* buffer)
     Serial.println("Host: api.thingspeak.com");
     client.println("Content-Type: application/x-www-form-urlencoded");
     Serial.println("Content-Type: application/x-www-form-urlencoded");
-    // client.println("time_format: absolute");
+    client.print("Content-Length: ");
+    client.println(data_length);
+    Serial.print("Content-Length: ");
+    Serial.println(data_length);
     client.println();
     Serial.println();
     client.println(buffer);
@@ -681,6 +711,7 @@ bool httpRequest(char* buffer)
   {
     Serial.println("Successful update");
     client.stop();
+    WiFi.end();
     return true;
   }
   else
@@ -688,6 +719,7 @@ bool httpRequest(char* buffer)
     Serial.print("Failed update, code: ");
     Serial.println(resp);
     client.stop();
+    WiFi.end();
     return false;
   }
 }
