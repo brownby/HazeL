@@ -36,7 +36,7 @@ char password[] = "slosilo!";
 WiFiClient client;
 
 File dataFile;
-String dataFileName = "datatest.csv";
+char dataFileName[] = "data.csv";
 
 TinyGPSPlus gps;
 time_t prevTimeStamp;
@@ -94,7 +94,7 @@ void setup() {
   u8g2.begin();
 
   display("Initializing...", 20, true, true);
-  delay(1000);
+  delay(2500);
 
   // Set sensor pin as input
   pinMode(LED_BUILTIN, OUTPUT);
@@ -102,6 +102,8 @@ void setup() {
   pinMode(SD_CS_PIN, OUTPUT);
 
   Serial.println("Initialize SD");
+  display("Checking SD", 20, true, true);
+  delay(2500);
 
   // Initialize SD card communication
   if(!SD.begin(SD_CS_PIN))
@@ -116,12 +118,17 @@ void setup() {
     Serial.println("Card initialized successfully");
     display("SD card detected", 20, true, true);
   }
+  delay(2500);
 
+  char displayBuffer[25];
   // Create column titles in CSV if creating it
   // If CSV already exists, data will just be appended
   if(!SD.exists(dataFileName))
   {
-    display("Creating .csv", 16, true, true);
+    strcpy(displayBuffer, "Creating ");
+    strcat(displayBuffer, dataFileName);
+    display(displayBuffer, 20, true, true);
+    delay(2500);
     dataFile = SD.open(dataFileName, FILE_WRITE);
     if(dataFile)
     {
@@ -147,6 +154,8 @@ void setup() {
     else
     {
       Serial.println("Couldn't open file");
+      display("Unable to open file", 16, true, false);
+      display("Check SD, reset device", 24, false, true);
     }
 
   }
@@ -154,7 +163,8 @@ void setup() {
   if(!initDustSensor())
   {
     Serial.println("Failed to initialize dust sensor");
-    display("Dust sensor init failed", 20, true, true);
+    display("Dust sensor init failed", 16, true, false);
+    display("Reset device", 24, false, true);
     while(true);
   }
 
@@ -185,7 +195,8 @@ void loop() {
     Serial.println();
   }
 
-  if(curMillis - prevWiFiMillis >= WIFI_TIME)
+  // if(curMillis - prevWiFiMillis >= WIFI_TIME)
+  if(wifiFlag)
   {
     updateThingSpeak();
     Serial.println("Updated to ThingSpeak");
@@ -199,11 +210,11 @@ void loop() {
 // ISR for button being pressed
 void buttonISR()
 {
-  // if(buttonISREn == true)
-  // {
-  //   wifiFlag = true;
-  //   buttonISREn = false;
-  // }
+  if(buttonISREn == true)
+  {
+    wifiFlag = true;
+    buttonISREn = false;
+  }
 }
 
 // sends initial command to dust sensor 
@@ -266,7 +277,9 @@ bool parseSensorData(uint16_t *data_out, uint8_t *data_raw)
 // updates to ThingSpeak in bulk updates of 2kB of data
 void updateThingSpeak()
 {
-  prevWiFiMillis = curMillis;
+  // prevWiFiMillis = curMillis;
+  // connectWiFi();
+  delay(2500);
 
   memset(tspeak_buf, 0, sizeof(tspeak_buf));
   strcpy(tspeak_buf, "write_api_key=");
@@ -274,6 +287,8 @@ void updateThingSpeak()
   strcat(tspeak_buf, "&time_format=absolute&updates=");
 
   // Open file on SD card
+  display("Updating to", 16, true, false);
+  display("ThingSpeak...", 24, false, true);
   dataFile = SD.open(dataFileName, FILE_READ);
   if(dataFile)
   {
@@ -290,7 +305,7 @@ void updateThingSpeak()
     {
       char c = dataFile.read();
 
-      // Every 2kB, send an update to thing speak
+      // Every time you fill up tspeak_buf, send an update to thing speak
       if((charCount >= sizeof(tspeak_buf) - 100) && (c != '\n'))
       {
         Serial.println("Buffer full!");
@@ -299,6 +314,8 @@ void updateThingSpeak()
         httpRequest(tspeak_buf);
 
         // reset byte counter and thingspeak buffer
+        i = 0;
+        colCount = 0;
         charCount = 60;
         memset(tspeak_buf, 0, sizeof(tspeak_buf));
         strcpy(tspeak_buf, "write_api_key=");
@@ -382,7 +399,7 @@ void updateThingSpeak()
           // Serial.println(sd_buf);
           // remove newline from the end of the line
           sd_buf[strlen(sd_buf) - 1] = 0;
-          // Serial.println(sd_buf);
+          Serial.println(sd_buf);
           strcat(tspeak_buf, sd_buf);
           strcat(tspeak_buf, "|"); // add pipe character between updates
           charCount += lineCharCount;
@@ -631,6 +648,7 @@ void updateSampleSD()
   else
   {
     Serial.println("Couldn't open file");
+    display("Couldn't open file", 20, true, true);
   }
 
   sleepGps();
@@ -716,9 +734,10 @@ bool httpRequest(char* buffer)
   delay(250);
   client.parseFloat();
   int resp = client.parseInt();
-  if(resp == 200)
+  if(resp == 202)
   {
-    Serial.println("Successful update");
+    Serial.print("Successful update, code: ");
+    Serial.println(resp);
     client.stop();
     WiFi.end();
     return true;
