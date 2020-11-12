@@ -78,7 +78,7 @@ uint8_t i2c_buf[30]; // data buffer for I2C comms
 bool firstLineDone = false; // flag for first line (titles) having been read
 uint32_t lastLineRead = 0; // latest line that SD card was updated from
 char sd_buf[200]; // buffer to store single SD card line
-char tspeak_buf[2000]; // There appears to be a maximum of 1400 bytes that can be sent a time, either to ThingSpeak or with WiFi library
+char tspeak_buf[1400]; // There appears to be a maximum of 1400 bytes that can be sent a time, either to ThingSpeak or with WiFi library
 char status_buf[20]; // buffer for status text
 uint8_t colPositions[17] = {0}; // array to store indices of commas in sd_buf, indicating column delineations
 
@@ -312,7 +312,8 @@ void updateThingSpeak()
         Serial.println("Buffer full!");
         Serial.println(charCount);
         tspeak_buf[strlen(tspeak_buf) - 1] = 0; // remove last pipe character
-        httpRequest(tspeak_buf);
+
+        while(!httpRequest(tspeak_buf)); // keep trying until ThingSpeak/WiFi connection works
 
         // reset byte counter and thingspeak buffer
         i = 0;
@@ -403,10 +404,11 @@ void updateThingSpeak()
           Serial.println(sd_buf);
           strcat(tspeak_buf, sd_buf);
           strcat(tspeak_buf, "|"); // add pipe character between updates
-          charCount += lineCharCount;
+          // charCount += lineCharCount;
+          charCount += strlen(sd_buf);
         }
 
-        lineCharCount = 0;
+        // lineCharCount = 0;
         memset(sd_buf, 0, sizeof(sd_buf));
       }
       else if(firstLineDone)
@@ -417,7 +419,7 @@ void updateThingSpeak()
           colPositions[++colCount] = i+1;
         }
         sd_buf[i++] = c;
-        lineCharCount++;
+        // lineCharCount++;
       }
     }
 
@@ -429,7 +431,7 @@ void updateThingSpeak()
     lastLineRead = lineCount - 1;
 
     // update with the latest data
-    httpRequest(tspeak_buf);
+    while(!httpRequest(tspeak_buf));
     firstLineDone = false;
   }
   else
@@ -685,15 +687,15 @@ bool httpRequest(char* buffer)
     Serial.println(data_length);
     client.println();
     Serial.println();
-    for(int i = 0; i < strlen(buffer); i++)
-    {
-      client.print(buffer[i]);
-      Serial.print(buffer[i]);
-    }
-    client.println();
-    Serial.println();
-    // client.println(buffer);
-    // Serial.println(buffer);
+    // for(int i = 0; i < strlen(buffer); i++)
+    // {
+    //   client.print(buffer[i]);
+    //   Serial.print(buffer[i]);
+    // }
+    // client.println();
+    // Serial.println();
+    client.println(buffer);
+    Serial.println(buffer);
   }
   else
   {
@@ -721,7 +723,11 @@ bool httpRequest(char* buffer)
     Serial.print("Failed update, code: ");
     Serial.println(resp);
     client.stop();
+    Serial.println("Client stopped");
     WiFi.end();
+    Serial.println("WiFi off");
+    display("Updating to", 16, true, false);
+    display("ThingSpeak...", 24, false, true);  
     return false;
   }
 }
@@ -754,7 +760,7 @@ void connectWiFi()
     Serial.print(".");
     if(millis() - startTime > 60000) // time out after a minute
     {
-      Serial.println("Time out, reconnecting");
+      Serial.println("\nTime out, reconnecting");
       WiFi.end();
       delay(250);
       WiFi.begin(ssid, password);
