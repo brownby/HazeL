@@ -277,9 +277,7 @@ bool parseSensorData(uint16_t *data_out, uint8_t *data_raw)
 // updates to ThingSpeak in bulk updates of 2kB of data
 void updateThingSpeak()
 {
-  // prevWiFiMillis = curMillis;
   // connectWiFi();
-  delay(2500);
 
   memset(tspeak_buf, 0, sizeof(tspeak_buf));
   strcpy(tspeak_buf, "write_api_key=");
@@ -300,6 +298,9 @@ void updateThingSpeak()
     uint32_t colCount = 0; 
     uint32_t i = 0;
     uint32_t linePosition = 0; // location in file of most recent line
+
+    Serial.print("charCount: ");
+    Serial.println(charCount);
     
     while(dataFile.available())
     {
@@ -428,11 +429,8 @@ void updateThingSpeak()
     lastLineRead = lineCount - 1;
 
     // update with the latest data
-    // httpRequest(tspeak_buf);
+    httpRequest(tspeak_buf);
     firstLineDone = false;
-    // shutoff WiFi
-    WiFi.end();
-    Serial.println("Turning off WiFi");
   }
   else
   {
@@ -671,32 +669,6 @@ bool httpRequest(char* buffer)
   strcat(post, channelID);
   strcat(post, "/bulk_update.csv HTTP/1.1");
 
-  // // URL encode string
-  // for(int i = 0; i < strlen(buffer); i++)
-  // {
-  //   if(buffer[i] == ',')
-  //   {
-  //     // move everything else past this point two spaces to the right
-  //     for(int j = strlen(buffer) + 1; j > i; j--)
-  //     {
-  //       buffer[j] = buffer[j-2];
-  //     }
-  //     buffer[i] = '%';
-  //     buffer[i+1] = '2';
-  //     buffer[i+2] = 'C';
-  //   }
-  //   else if(buffer[i] == '|')
-  //   {
-  //     for(int j = strlen(buffer) + 1; j > i; j--)
-  //     {
-  //       buffer[j] = buffer[j-2];
-  //     }
-  //     buffer[i] = '%';
-  //     buffer[i+1] = '7';
-  //     buffer[i+2] = 'C';
-  //   }
-  // }
-
   itoa(strlen(buffer), data_length, 10);
 
   if(client.connect(server, 80))
@@ -705,10 +677,6 @@ bool httpRequest(char* buffer)
     Serial.println(post);
     client.println("Host: api.thingspeak.com");
     Serial.println("Host: api.thingspeak.com");
-    // client.println("Connection: close");
-    // Serial.println("Connection: close");
-    // client.println("User-Agent: mw.doc.bulk-update (Arduino ESP8266)");
-    // Serial.println("User-Agent: me.doc.bulk-update (Arduino ESP8266)");
     client.println("Content-Type: application/x-www-form-urlencoded");
     Serial.println("Content-Type: application/x-www-form-urlencoded");
     client.print("Content-Length: ");
@@ -720,10 +688,12 @@ bool httpRequest(char* buffer)
     for(int i = 0; i < strlen(buffer); i++)
     {
       client.print(buffer[i]);
+      Serial.print(buffer[i]);
     }
     client.println();
+    Serial.println();
     // client.println(buffer);
-    Serial.println(buffer);
+    // Serial.println(buffer);
   }
   else
   {
@@ -739,7 +709,11 @@ bool httpRequest(char* buffer)
     Serial.print("Successful update, code: ");
     Serial.println(resp);
     client.stop();
+    Serial.println("Client stopped");
     WiFi.end();
+    Serial.println("WiFi off");
+    display("Updating to", 16, true, false);
+    display("ThingSpeak...", 24, false, true);  
     return true;
   }
   else
@@ -772,11 +746,20 @@ void connectWiFi()
     // Initialize WiFi 
   WiFi.begin(ssid, password);
   
+  unsigned long startTime = millis();
+  display("Connecting to WiFi", 20, true, true);
   while(WiFi.status() != WL_CONNECTED)
   {
     delay(500);
     Serial.print(".");
-    display("Connecting to WiFi", 20, true, true);
+    if(millis() - startTime > 60000) // time out after a minute
+    {
+      Serial.println("Time out, reconnecting");
+      WiFi.end();
+      delay(250);
+      WiFi.begin(ssid, password);
+      startTime = millis();
+    }
   }
 
   Serial.println("\nWiFi connected");
