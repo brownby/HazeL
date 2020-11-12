@@ -78,7 +78,7 @@ uint8_t i2c_buf[30]; // data buffer for I2C comms
 bool firstLineDone = false; // flag for first line (titles) having been read
 uint32_t lastLineRead = 0; // latest line that SD card was updated from
 char sd_buf[200]; // buffer to store single SD card line
-char tspeak_buf[1400]; // There appears to be a maximum of 1400 bytes that can be sent a time, either to ThingSpeak or with WiFi library
+char tspeak_buf[5000]; // There appears to be a maximum of 1400 bytes that can be sent a time, either to ThingSpeak or with WiFi library
 char status_buf[20]; // buffer for status text
 uint8_t colPositions[17] = {0}; // array to store indices of commas in sd_buf, indicating column delineations
 
