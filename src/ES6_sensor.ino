@@ -1,5 +1,7 @@
 /*
  * ES6_sensor
+ * Benjamin Y. Brown
+ * Last updated: 11/13/20
  * 
  * Creates a file called "data.csv" on the SD card with columns for time stamp, PM concentrations, raw particle concentrations, and latitude and longitude
  *
@@ -11,7 +13,6 @@
  * GPS module may return stale time stamps depending on signal strength 
  * All data will be stored on SD card, regardless of staleness of time stamps
  * but only data points with unique time stamps will be updated to ThingSpeak
- * 
  */
 
 #include <SPI.h>
