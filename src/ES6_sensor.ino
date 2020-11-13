@@ -744,12 +744,13 @@ void blinkLed()
 // connect to WiFi
 void connectWiFi()
 {
-    // Initialize WiFi 
-  WiFi.begin(ssid, password);
-  
+  // Initialize WiFi 
   unsigned long startTime = millis();
   display("Connecting to WiFi", 20, true, true);
-  while(WiFi.status() != WL_CONNECTED)
+
+  // WiFi.begin(ssid, password);
+  
+  while(WiFi.begin(ssid, password) != WL_CONNECTED)
   {
     delay(500);
     Serial.print(".");
@@ -758,7 +759,7 @@ void connectWiFi()
       Serial.println("\nTime out, reconnecting");
       WiFi.end();
       delay(250);
-      WiFi.begin(ssid, password);
+      // WiFi.begin(ssid, password);
       startTime = millis();
     }
   }
