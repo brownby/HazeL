@@ -332,9 +332,9 @@ void updateThingSpeak()
         memset(sd_buf, 0, sizeof(sd_buf));
         dataFile.seek(linePosition);
 
-        delay(20000); // can only update to Thingspeak every 15s
         display("Updating to", 16, true, false);
         display("ThingSpeak...", 24, false, true);
+        delay(10000); // can only update to Thingspeak every 15s
 
         Serial.println("Back to updating");
       }
@@ -720,6 +720,7 @@ bool httpRequest(char* buffer)
     display("Successful update", 16, true, false);
     display(displayBuffer, 24, false, true);
     success = true;
+    delay(10000);
   }
   else
   {
