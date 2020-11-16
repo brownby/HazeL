@@ -445,14 +445,12 @@ void updateSampleSD()
 
   display("Reading GPS...", 20, true, true);
 
-  // reag gps data
-  readGps();
-
-  // re-read GPS until data is valid
-  while(!(gps.date.isValid() && gps.time.isValid() && gps.location.isValid() && gps.altitude.isValid()))
+  // Read GPS data until it's valid
+  do
   {
     readGps();
-  }
+  } while (!(gps.date.isValid() && gps.time.isValid() && gps.location.isValid() && gps.altitude.isValid()));
+  
 
   // set time for now()
   setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
