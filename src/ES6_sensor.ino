@@ -451,12 +451,11 @@ void updateSampleSD()
     readGps();
   } while (!(gps.date.isValid() && gps.time.isValid() && gps.location.isValid() && gps.altitude.isValid()));
   
-
   // set time for now()
   setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
 
   // only consider time stamp fresh if it occurs after the previous
-  if(now() > prevTimeStamp)
+  if((now() > prevTimeStamp) && (gps.time.age() < 2500))
   {
     Serial.println("Fresh timestamp");
     prevTimeStamp = now();
