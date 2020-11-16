@@ -101,7 +101,7 @@ void setup() {
 
   // Set relevant pin modes
   pinMode(LED_BUILTIN, OUTPUT);
-  pinMode(BUTTON_PIN, INPUT);
+  pinMode(BUTTON_PIN, INPUT_PULLDOWN);
   pinMode(SD_CS_PIN, OUTPUT);
 
   Serial.println("Initialize SD");
