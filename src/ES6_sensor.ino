@@ -433,7 +433,12 @@ void updateThingSpeak()
 
     // update with the latest data
     tspeak_buf[strlen(tspeak_buf) - 1] = 0; // remove last pipe character
-    while(!httpRequest(tspeak_buf));
+    
+    // Only update to ThingSpeak if there's data leftover
+    if(strlen(tspeak_buf) >= 60)
+    {
+      while(!httpRequest(tspeak_buf));
+    }
   }
   else
   {
