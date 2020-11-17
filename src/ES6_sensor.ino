@@ -1,11 +1,12 @@
 /*
  * ES6_sensor
  * Benjamin Y. Brown
- * Last updated: 11/13/20
+ * Last updated: 11/17/20
  * 
  * Creates a file called "data.csv" on the SD card with columns for time stamp, PM concentrations, raw particle concentrations, and latitude and longitude
  *
  * Device will bulk update to ThingSpeak when button is pressed (may take a few minutes depending on amount of data)
+ * For automatic ThingSpeak updates every 30 seconds, pull SWITCH_PIN low
  * 
  * Before uploading, enter the information for your WiFi SSID and password, 
  * as well as your ThingSpeak channel ID and write API key in "secrets.h"
