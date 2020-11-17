@@ -28,8 +28,10 @@
 
 #define SAMP_TIME 5000 // number of ms between sensor readings
 #define BLINK_TIME 300 // time in ms between LED blinks on successful write to SD
+#define WIFI_TIME 30000 // number of ms between WiFi updates in continual update mode
 #define BLINK_CNT 3 // number of times to blink LED on successful write
-#define BUTTON_PIN 0 // pin for button that triggers ThingSpeak updates
+#define BUTTON_PIN A2 // pin for button that triggers ThingSpeak updates
+#define SWITCH_PIN A3 // pin for switch that sets continual update mode
 #define SD_CS_PIN 4 // CS pin of SD card, 4 on SD MKR proto shield
 #define SENSOR_ADDR 0x40 // I2C address of dust sensor
 
@@ -102,6 +104,7 @@ void setup() {
   // Set relevant pin modes
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(BUTTON_PIN, INPUT_PULLDOWN);
+  pinMode(SWITCH_PIN, INPUT_PULLUP);
   pinMode(SD_CS_PIN, OUTPUT);
 
   Serial.println("Initialize SD");
@@ -194,6 +197,13 @@ void loop() {
       blinkLed();
     }
   }
+
+  // Set WiFi flag to update to ThingSpeak if switch is set to continual update mode
+  if((curMillis - prevWiFiMillis >= WIFI_TIME) && (!digitalRead(SWITCH_PIN)))
+  {
+    wifiFlag = true;
+  }
+
 
   // Read sensor and update SD card every SAMP_TIME milliseconds
   if(curMillis - prevSampMillis >= SAMP_TIME)
