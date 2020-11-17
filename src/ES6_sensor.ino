@@ -194,6 +194,7 @@ void loop() {
   {
     if(curMillis - prevLedMillis >= BLINK_TIME)
     {
+      prevLedMillis = curMillis;
       blinkLed();
     }
   }
@@ -201,6 +202,7 @@ void loop() {
   // Set WiFi flag to update to ThingSpeak if switch is set to continual update mode
   if((curMillis - prevWiFiMillis >= WIFI_TIME) && (!digitalRead(SWITCH_PIN)))
   {
+    prevWiFiMillis = curMillis;
     wifiFlag = true;
   }
 
@@ -208,6 +210,7 @@ void loop() {
   // Read sensor and update SD card every SAMP_TIME milliseconds
   if(curMillis - prevSampMillis >= SAMP_TIME)
   {
+    prevSampMillis = curMillis;
     updateSampleSD();
     Serial.println("Updated sample in SD card");
     Serial.println();
@@ -450,8 +453,6 @@ void updateSampleSD()
 
   // wake up GPS module
   wakeGps();
-
-  prevSampMillis = curMillis;
 
   display("Reading GPS...", 20, true, true);
 
@@ -750,7 +751,6 @@ bool httpRequest(char* buffer)
 // blink LED
 void blinkLed()
 {
-  prevLedMillis = curMillis;
   
   digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
   
