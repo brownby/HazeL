@@ -313,6 +313,7 @@ void updateThingSpeak()
   if(dataFile)
   {
     uint32_t charCount = strlen(tspeak_buf);
+    uint32 rawByteCount = 0;
     uint32_t colCount = 0; 
     uint32_t i = 0;
     uint32_t linePosition = 0; // location in file of most recent line
@@ -321,10 +322,13 @@ void updateThingSpeak()
     dataFile.seek(lastLinePosition);
     bytesLeft = dataFile.size() - prevFileSize;
     prevFileSize = dataFile.size();
+    Serial.print("bytesLeft: "); Serial.println(bytesLeft);
+    Serial.print("prevFileSize: "); Serial.println(prevFileSize);
     
     while(dataFile.available())
     {
       char c = dataFile.read();
+      rawByteCount++;
 
       // Every time you fill up tspeak_buf, send an update to thing speak
       if((charCount >= sizeof(tspeak_buf) - 200) && (c != '\n'))
@@ -334,8 +338,10 @@ void updateThingSpeak()
         tspeak_buf[strlen(tspeak_buf) - 1] = 0; // remove last pipe character
 
         while(!httpRequest(tspeak_buf)); // keep trying until ThingSpeak/WiFi connection works
-        uint32_t tspeakBufSize = strlen(tspeak_buf);
-        percentComplete += (tspeakBufSize*100)/bytesLeft;
+        // uint32_t tspeakBufSize = strlen(tspeak_buf);
+        Serial.println(rawByteCount);
+        Serial.println(bytesLeft);
+        percentComplete = (rawByteCount*100)/bytesLeft;
 
         // reset byte counter and thingspeak buffer
         memset(tspeak_buf, 0, sizeof(tspeak_buf));
@@ -457,6 +463,10 @@ void updateThingSpeak()
     {
       while(!httpRequest(tspeak_buf));
     }
+
+    display("All data updated", 16, true, false);
+    display("to ThingSpeak!", 24, false, true);
+    delay(5000);
   }
   else
   {
