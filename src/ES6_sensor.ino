@@ -84,6 +84,8 @@ char sd_buf[200]; // buffer to store single SD card line
 char tspeak_buf[5000]; // buffer for storing multiple rows of data from the CSV for ThingSpeak bulk updates
 char status_buf[20]; // buffer for status text
 uint8_t colPositions[17] = {0}; // array to store indices of commas in sd_buf, indicating column delineations
+unsigned long prevFileSize = 0; // last recorded file size
+unsigned long bytesLeft = 0; // bytes left in file to update to ThingSpeak
 
 void setup() {
   // initialize Serial port
@@ -317,7 +319,8 @@ void updateThingSpeak()
     int percentComplete = 0;
 
     dataFile.seek(lastLinePosition);
-    unsigned long fileSize = dataFile.size() - lastLinePosition; // calculate number of bytes that haven't been read
+    bytesLeft = dataFile.size() - prevFileSize;
+    prevFileSize = dataFile.size();
     
     while(dataFile.available())
     {
@@ -332,7 +335,7 @@ void updateThingSpeak()
 
         while(!httpRequest(tspeak_buf)); // keep trying until ThingSpeak/WiFi connection works
         uint32_t tspeakBufSize = strlen(tspeak_buf);
-        percentComplete += (tspeakBufSize*100)/fileSize;
+        percentComplete += (tspeakBufSize*100)/bytesLeft;
 
         // reset byte counter and thingspeak buffer
         memset(tspeak_buf, 0, sizeof(tspeak_buf));
