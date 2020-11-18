@@ -322,8 +322,6 @@ void updateThingSpeak()
     dataFile.seek(lastLinePosition);
     bytesLeft = dataFile.size() - prevFileSize;
     prevFileSize = dataFile.size();
-    Serial.print("bytesLeft: "); Serial.println(bytesLeft);
-    Serial.print("prevFileSize: "); Serial.println(prevFileSize);
     
     while(dataFile.available())
     {
@@ -338,9 +336,6 @@ void updateThingSpeak()
         tspeak_buf[strlen(tspeak_buf) - 1] = 0; // remove last pipe character
 
         while(!httpRequest(tspeak_buf)); // keep trying until ThingSpeak/WiFi connection works
-        // uint32_t tspeakBufSize = strlen(tspeak_buf);
-        Serial.println(rawByteCount);
-        Serial.println(bytesLeft);
         percentComplete = (rawByteCount*100)/bytesLeft;
 
         // reset byte counter and thingspeak buffer
