@@ -48,9 +48,9 @@ U8G2_SSD1306_128X64_ALT0_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 
 const char server[] = "api.thingspeak.com";
 
-unsigned long prevSampMillis;
-unsigned long prevLedMillis;
-unsigned long prevWiFiMillis;
+unsigned long prevSampMillis = 0;
+unsigned long prevLedMillis = 0;
+unsigned long prevWiFiMillis = 0;
 unsigned long curMillis;
 
 volatile bool wifiFlag = false;
@@ -79,7 +79,6 @@ uint16_t particleData[12];
 uint8_t i2c_buf[30]; // data buffer for pulling data from dust sensor
 
 bool firstLineDone = false; // flag for first line (titles) having been read
-uint32_t lastLineRead = 0; // latest line that SD card was updated from
 uint32_t lastLinePosition = 0;
 char sd_buf[200]; // buffer to store single SD card line
 char tspeak_buf[5000]; // buffer for storing multiple rows of data from the CSV for ThingSpeak bulk updates
@@ -307,17 +306,18 @@ void updateThingSpeak()
 
   // Open file on SD card
   display("Updating to", 16, true, false);
-  display("ThingSpeak...", 24, false, true);
+  display("ThingSpeak...00%", 24, false, true);
   dataFile = SD.open(dataFileName, FILE_READ);
   if(dataFile)
   {
-    uint32_t lineCount = 0; // keep track of which line currently being read
     uint32_t charCount = strlen(tspeak_buf);
     uint32_t colCount = 0; 
     uint32_t i = 0;
     uint32_t linePosition = 0; // location in file of most recent line
+    int percentComplete = 0;
 
     dataFile.seek(lastLinePosition);
+    unsigned long fileSize = dataFile.size() - lastLinePosition; // calculate number of bytes that haven't been read
     
     while(dataFile.available())
     {
@@ -331,6 +331,8 @@ void updateThingSpeak()
         tspeak_buf[strlen(tspeak_buf) - 1] = 0; // remove last pipe character
 
         while(!httpRequest(tspeak_buf)); // keep trying until ThingSpeak/WiFi connection works
+        uint32_t tspeakBufSize = strlen(tspeak_buf);
+        percentComplete += (tspeakBufSize*100)/fileSize;
 
         // reset byte counter and thingspeak buffer
         memset(tspeak_buf, 0, sizeof(tspeak_buf));
@@ -342,13 +344,26 @@ void updateThingSpeak()
         colCount = 0;
         charCount = strlen(tspeak_buf);
 
+        char tspeakDisplay[20];
+        char percentDisplay[10];
+        itoa(percentComplete, percentDisplay, 10);
+        strcpy(tspeakDisplay, "ThingSpeak...");
+        if(percentComplete < 10)
+        {
+          strcat(tspeakDisplay, "0");
+        }
+        strcat(tspeakDisplay, percentDisplay);
+        strcat(tspeakDisplay, "%");
+
+        Serial.print("Update "); Serial.print(percentComplete); Serial.println("% done");
+
         // clear SD line buffer and move back to start of latest line
         memset(sd_buf, 0, sizeof(sd_buf));
         dataFile.seek(linePosition);
 
         display("Updating to", 16, true, false);
-        display("ThingSpeak...", 24, false, true);
-        delay(10000); // can only update to Thingspeak every 15s
+        display(tspeakDisplay, 24, false, true);
+        delay(15000); // can only update to Thingspeak every 15s
 
         Serial.println("Back to updating");
       }
@@ -388,7 +403,6 @@ void updateThingSpeak()
           uint8_t oneumIndex = colPositions[9]; // index of 1um particles
           uint8_t pmColsDel = pmAtIndex - pmStIndex; // PM columns to delete
           uint8_t cntsColDel = oneumIndex - zerop5umIndex; // Particle count columns to be deleted
-          uint8_t lastIndex;
 
           // move indices since we'll be deleting characters
           zerop5umIndex -= pmColsDel;
@@ -711,8 +725,6 @@ bool httpRequest(char* buffer)
     }
     client.println();
     Serial.println();
-    // client.println(buffer);
-    // Serial.println(buffer);
   }
   else
   {
@@ -734,7 +746,7 @@ bool httpRequest(char* buffer)
     display("Successful update", 16, true, false);
     display(displayBuffer, 24, false, true);
     success = true;
-    delay(10000);
+    delay(5000);
   }
   else
   {
@@ -780,7 +792,7 @@ void connectWiFi()
   {
     delay(500);
     Serial.print(".");
-    if(millis() - startTime > 20000) // time out after a minute, then retry
+    if(millis() - startTime > 20000) // time out after a 20s, then retry
     {
       Serial.println("\nTime out, reconnecting");
       WiFi.end();
