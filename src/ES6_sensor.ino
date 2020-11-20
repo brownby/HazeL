@@ -35,6 +35,7 @@
 #define SWITCH_PIN A3 // pin for switch that sets continual update mode
 #define SD_CS_PIN 4 // CS pin of SD card, 4 on SD MKR proto shield
 #define SENSOR_ADDR 0x40 // I2C address of dust sensor
+#define CUR_YEAR 2020 // for GPS first fix error checking
 
 WiFiClient client;
 
@@ -43,6 +44,7 @@ char dataFileName[] = "data.csv";
 
 TinyGPSPlus gps;
 time_t prevTimeStamp;
+bool firstGpsRead = true;
 
 U8G2_SSD1306_128X64_ALT0_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 
@@ -482,13 +484,21 @@ void updateSampleSD()
   // wake up GPS module
   wakeGps();
 
-  display("Reading GPS...", 20, true, true);
+  if(firstGpsRead)
+  {
+    display("Reading GPS...", 16, true, false);
+    display("(GPS warming up)", 24, false, true);
+    firstGpsRead = false;
+  }
+  else{
+    display("Reading GPS...", 20, true, true);
+  }
 
   // Read GPS data until it's valid
   do
   {
     readGps();
-  } while (!(gps.date.isValid() && gps.time.isValid() && gps.location.isValid() && gps.altitude.isValid()));
+  } while (!(gps.date.isValid() && gps.time.isValid() && gps.location.isValid() && gps.altitude.isValid() && gps.date.year() == CUR_YEAR));
   
   // set time for now()
   setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
