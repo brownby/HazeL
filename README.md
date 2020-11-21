@@ -1,4 +1,4 @@
-# ES6_sensor
+# HazeL
 
 Dust sensor created for Harvard University ESE6, Introduction to Environmental Science and Engineering. 
 
