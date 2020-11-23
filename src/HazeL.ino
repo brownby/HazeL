@@ -1,5 +1,5 @@
 /*
- * ES6_sensor
+ * HazeL
  * Benjamin Y. Brown
  * Last updated: 11/23/20
  * 
@@ -36,7 +36,6 @@
 #define SD_CS_PIN 4 // CS pin of SD card, 4 on SD MKR proto shield
 #define SENSOR_ADDR 0x40 // I2C address of dust sensor
 #define CUR_YEAR 2020 // for GPS first fix error checking
-// #define SECS_PER_HOUR 3600
 
 WiFiClient client;
 
