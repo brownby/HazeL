@@ -1,7 +1,7 @@
 /*
  * ES6_sensor
  * Benjamin Y. Brown
- * Last updated: 11/20/20
+ * Last updated: 11/23/20
  * 
  * Creates a file called "data.csv" on the SD card with columns for time stamp, PM concentrations, raw particle concentrations, and latitude and longitude
  *
