@@ -36,6 +36,7 @@
 #define SD_CS_PIN 4 // CS pin of SD card, 4 on SD MKR proto shield
 #define SENSOR_ADDR 0x40 // I2C address of dust sensor
 #define CUR_YEAR 2020 // for GPS first fix error checking
+// #define SECS_PER_HOUR 3600
 
 WiFiClient client;
 
@@ -43,8 +44,10 @@ File dataFile;
 char dataFileName[] = "data.csv";
 
 TinyGPSPlus gps;
-time_t prevTimeStamp;
 bool firstGpsRead = true;
+
+time_t prevTimeStamp;
+time_t localTime;
 
 U8G2_SSD1306_128X64_ALT0_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 
@@ -503,6 +506,9 @@ void updateSampleSD()
   // set time for now()
   setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
 
+  // convert to local time
+  localTime = now() - (time_t)SECS_PER_HOUR*TIME_ZONE;
+
   // only consider time stamp fresh if it occurs after the previous
   if((now() > prevTimeStamp) && (gps.time.age() < 2500))
   {
@@ -534,20 +540,20 @@ void updateSampleSD()
   if(dataFile)
   {
     // Display time stamp and data in the serial monitor
-    Serial.print(gps.date.month());
-    Serial.print("/");
-    Serial.print(gps.date.day());
-    Serial.print("/");
-    Serial.print(gps.date.year());
-    Serial.print(" ");
-    if(gps.time.hour() < 10) Serial.print("0");
-    Serial.print(gps.time.hour());
-    Serial.print(":");
-    if(gps.time.minute() < 10) Serial.print("0");
-    Serial.print(gps.time.minute());
-    Serial.print(":");
-    if(gps.time.second() < 10) Serial.print("0");
-    Serial.print(gps.time.second());
+    Serial.print(month(localTime));
+    Serial.print('/');
+    Serial.print(day(localTime));
+    Serial.print('/');
+    Serial.print(year(localTime));
+    Serial.print(' ');
+    if(hour(localTime) < 10) Serial.print('0');
+    Serial.print(hour(localTime));
+    Serial.print(':') ;
+    if(minute(localTime) < 10) Serial.print('0');
+    Serial.print(minute(localTime));
+    Serial.print(':');
+    if(second(localTime) < 10) Serial.print('0');
+    Serial.print(second(localTime));
     Serial.println(": ");
     
     Serial.print("PM1.0 (standard): "); Serial.print(particleData[0]); Serial.println(" ug/m^3");
@@ -571,23 +577,38 @@ void updateSampleSD()
     Serial.println(gps.altitude.meters(), 2);
     
     // Update data.csv with the same information
-    
+    char offsetString[5];
+    itoa((int)abs(TIME_ZONE), offsetString, 10);
+
     // use ISO 8601 format for timestamp
-    dataFile.print(gps.date.year());
-    dataFile.print("-");
-    dataFile.print(gps.date.month());
-    dataFile.print("-");
-    dataFile.print(gps.date.day());
-    dataFile.print("T");
-    if(gps.time.hour() < 10) dataFile.print("0");
-    dataFile.print(gps.time.hour());
+    dataFile.print(year(localTime));
+    dataFile.print('-');
+    dataFile.print(month(localTime));
+    dataFile.print('-');
+    dataFile.print(day(localTime));
+    dataFile.print('T');
+    if(hour(localTime) < 10) dataFile.print('0');
+    dataFile.print(hour(localTime));
+    dataFile.print(':');
+    if(minute(localTime) < 10) dataFile.print('0');
+    dataFile.print(minute(localTime));
     dataFile.print(":");
-    if(gps.time.minute() < 10) dataFile.print("0");
-    dataFile.print(gps.time.minute());
-    dataFile.print(":");
-    if(gps.time.second() < 10) dataFile.print("0");
-    dataFile.print(gps.time.second());
-    dataFile.print("+00:00,");
+    if(second(localTime) < 10) dataFile.print('0');
+    dataFile.print(second(localTime));
+    if(TIME_ZONE < 0)
+    {
+      dataFile.print('-');
+    }
+    else if(TIME_ZONE >= 0)
+    {
+      dataFile.print('+');
+    }
+    if(abs(TIME_ZONE) < 10)
+    {
+      dataFile.print('0');
+    }
+    dataFile.print(offsetString);
+    dataFile.print(":00,");
     dataFile.print(particleData[0]); // PM1.0 (standard)
     dataFile.print(",");
     dataFile.print(particleData[1]); // PM2.5 (standard)
@@ -643,11 +664,11 @@ void updateSampleSD()
     itoa(particleData[4], pm2p5Text, 10);
     itoa(particleData[5], pm10p0Text, 10);
 
-    itoa(gps.time.hour(), hourText, 10);
-    itoa(gps.time.minute(), minuteText, 10);
-    itoa(gps.date.month(), monthText, 10);
-    itoa(gps.date.day(), dayText, 10);
-    itoa(gps.date.year(), yearText, 10);
+    itoa(hour(localTime), hourText, 10);
+    itoa(minute(localTime), minuteText, 10);
+    itoa(month(localTime), monthText, 10);
+    itoa(day(localTime), dayText, 10);
+    itoa(year(localTime), yearText, 10);
 
     strcpy(displayText, "PM1.0:  ");
     strcat(displayText, pm1p0Text);
@@ -670,13 +691,13 @@ void updateSampleSD()
     strcat(timeText, "/");
     strcat(timeText, yearText);
     strcat(timeText, " ");
-    if(gps.time.hour() < 10)
+    if(hour(localTime) < 10)
     {
       strcat(timeText, "0");
     }
     strcat(timeText, hourText);
     strcat(timeText, ":");
-    if(gps.time.minute() < 10)
+    if(minute(localTime) < 10)
     {
       strcat(timeText, "0");
     }
