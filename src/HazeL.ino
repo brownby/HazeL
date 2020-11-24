@@ -510,7 +510,8 @@ void updateSampleSD()
   utcTime = now();
 
   // convert to local time
-  localTime = utcTime + SECS_PER_HOUR*timeZone;
+  // localTime = utcTime + SECS_PER_HOUR*timeZone; // TODO: conversion to local time zone, still some bugs that need to be resolved
+  localTime = utcTime;
   int localYear = year(localTime);
   int localMonth = month(localTime);
   int localDay = day(localTime);
