@@ -506,7 +506,7 @@ void updateSampleSD()
   setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
 
   // convert to local time
-  localTime = now() + (time_t)SECS_PER_HOUR*TIME_ZONE;
+  localTime = now() + SECS_PER_HOUR*timeZone;
 
   // only consider time stamp fresh if it occurs after the previous
   if((now() > prevTimeStamp) && (gps.time.age() < 2500))
@@ -577,7 +577,7 @@ void updateSampleSD()
     
     // Update data.csv with the same information
     char offsetString[5];
-    itoa((int)abs(TIME_ZONE), offsetString, 10);
+    itoa(abs(timeZone), offsetString, 10);
 
     // use ISO 8601 format for timestamp
     dataFile.print(year(localTime));
@@ -594,15 +594,15 @@ void updateSampleSD()
     dataFile.print(":");
     if(second(localTime) < 10) dataFile.print('0');
     dataFile.print(second(localTime));
-    if(TIME_ZONE < 0)
+    if(timeZone < 0)
     {
       dataFile.print('-');
     }
-    else if(TIME_ZONE >= 0)
+    else if(timeZone >= 0)
     {
       dataFile.print('+');
     }
-    if(abs(TIME_ZONE) < 10)
+    if(abs(timeZone) < 10)
     {
       dataFile.print('0');
     }
