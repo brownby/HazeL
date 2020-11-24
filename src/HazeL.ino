@@ -506,7 +506,7 @@ void updateSampleSD()
   setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
 
   // convert to local time
-  localTime = now() - (time_t)SECS_PER_HOUR*TIME_ZONE;
+  localTime = now() + (time_t)SECS_PER_HOUR*TIME_ZONE;
 
   // only consider time stamp fresh if it occurs after the previous
   if((now() > prevTimeStamp) && (gps.time.age() < 2500))
