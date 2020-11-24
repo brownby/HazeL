@@ -46,7 +46,6 @@ TinyGPSPlus gps;
 bool firstGpsRead = true;
 
 time_t prevTimeStamp;
-time_t localTime;
 
 U8G2_SSD1306_128X64_ALT0_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 
@@ -479,6 +478,8 @@ void updateThingSpeak()
 void updateSampleSD()
 {
   bool staleFlag = false;
+  time_t localTime;
+  time_t utcTime;
 
   // disable button ISR (do I still want to do this?)
   buttonISREn = false;
@@ -505,14 +506,23 @@ void updateSampleSD()
   // set time for now()
   setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
 
+  // store UTC time
+  utcTime = now();
+
   // convert to local time
-  localTime = now() + SECS_PER_HOUR*timeZone;
+  localTime = utcTime + SECS_PER_HOUR*timeZone;
+  int localYear = year(localTime);
+  int localMonth = month(localTime);
+  int localDay = day(localTime);
+  int localHour = hour(localTime);
+  int localMinute = minute(localTime);
+  int localSecond = second(localTime);
 
   // only consider time stamp fresh if it occurs after the previous
-  if((now() > prevTimeStamp) && (gps.time.age() < 2500))
+  if((utcTime > prevTimeStamp) && (gps.time.age() < 2500))
   {
     Serial.println("Fresh timestamp");
-    prevTimeStamp = now();
+    prevTimeStamp = utcTime;
     staleFlag = false;
   }
   else
@@ -539,20 +549,20 @@ void updateSampleSD()
   if(dataFile)
   {
     // Display time stamp and data in the serial monitor
-    Serial.print(month(localTime));
+    Serial.print(localMonth);
     Serial.print('/');
-    Serial.print(day(localTime));
+    Serial.print(localDay);
     Serial.print('/');
-    Serial.print(year(localTime));
+    Serial.print(localYear);
     Serial.print(' ');
-    if(hour(localTime) < 10) Serial.print('0');
-    Serial.print(hour(localTime));
+    if(localHour < 10) Serial.print('0');
+    Serial.print(localHour);
     Serial.print(':') ;
-    if(minute(localTime) < 10) Serial.print('0');
-    Serial.print(minute(localTime));
+    if(localMinute < 10) Serial.print('0');
+    Serial.print(localMinute);
     Serial.print(':');
-    if(second(localTime) < 10) Serial.print('0');
-    Serial.print(second(localTime));
+    if(localSecond < 10) Serial.print('0');
+    Serial.print(localSecond);
     Serial.println(": ");
     
     Serial.print("PM1.0 (standard): "); Serial.print(particleData[0]); Serial.println(" ug/m^3");
@@ -580,20 +590,20 @@ void updateSampleSD()
     itoa(abs(timeZone), offsetString, 10);
 
     // use ISO 8601 format for timestamp
-    dataFile.print(year(localTime));
+    dataFile.print(localYear);
     dataFile.print('-');
-    dataFile.print(month(localTime));
+    dataFile.print(localMonth);
     dataFile.print('-');
-    dataFile.print(day(localTime));
+    dataFile.print(localDay);
     dataFile.print('T');
-    if(hour(localTime) < 10) dataFile.print('0');
-    dataFile.print(hour(localTime));
+    if(localHour < 10) dataFile.print('0');
+    dataFile.print(localHour);
     dataFile.print(':');
-    if(minute(localTime) < 10) dataFile.print('0');
-    dataFile.print(minute(localTime));
+    if(localMinute < 10) dataFile.print('0');
+    dataFile.print(localMinute);
     dataFile.print(":");
-    if(second(localTime) < 10) dataFile.print('0');
-    dataFile.print(second(localTime));
+    if(localSecond < 10) dataFile.print('0');
+    dataFile.print(localSecond);
     if(timeZone < 0)
     {
       dataFile.print('-');
@@ -663,11 +673,11 @@ void updateSampleSD()
     itoa(particleData[4], pm2p5Text, 10);
     itoa(particleData[5], pm10p0Text, 10);
 
-    itoa(hour(localTime), hourText, 10);
-    itoa(minute(localTime), minuteText, 10);
-    itoa(month(localTime), monthText, 10);
-    itoa(day(localTime), dayText, 10);
-    itoa(year(localTime), yearText, 10);
+    itoa(localHour, hourText, 10);
+    itoa(localMinute, minuteText, 10);
+    itoa(localMonth, monthText, 10);
+    itoa(localDay, dayText, 10);
+    itoa(localYear, yearText, 10);
 
     strcpy(displayText, "PM1.0:  ");
     strcat(displayText, pm1p0Text);
@@ -690,13 +700,13 @@ void updateSampleSD()
     strcat(timeText, "/");
     strcat(timeText, yearText);
     strcat(timeText, " ");
-    if(hour(localTime) < 10)
+    if(localHour < 10)
     {
       strcat(timeText, "0");
     }
     strcat(timeText, hourText);
     strcat(timeText, ":");
-    if(minute(localTime) < 10)
+    if(localMinute < 10)
     {
       strcat(timeText, "0");
     }
