@@ -1,7 +1,7 @@
 /*
  * HazeL
  * Benjamin Y. Brown
- * Last updated: 11/23/20
+ * Last updated: 11/24/20
  * 
  * Creates a file called "data.csv" on the SD card with columns for time stamp, PM concentrations, raw particle concentrations, and latitude and longitude
  *
@@ -587,8 +587,8 @@ void updateSampleSD()
     Serial.println(gps.altitude.meters(), 2);
     
     // Update data.csv with the same information
-    char offsetString[5];
-    itoa(abs(timeZone), offsetString, 10);
+    // char offsetString[5];
+    // itoa(abs(timeZone), offsetString, 10);
 
     // use ISO 8601 format for timestamp
     dataFile.print(localYear);
@@ -605,20 +605,20 @@ void updateSampleSD()
     dataFile.print(":");
     if(localSecond < 10) dataFile.print('0');
     dataFile.print(localSecond);
-    if(timeZone < 0)
-    {
-      dataFile.print('-');
-    }
-    else if(timeZone >= 0)
-    {
-      dataFile.print('+');
-    }
-    if(abs(timeZone) < 10)
-    {
-      dataFile.print('0');
-    }
-    dataFile.print(offsetString);
-    dataFile.print(":00,");
+    // if(timeZone < 0)
+    // {
+    //   dataFile.print('-');
+    // }
+    // else if(timeZone >= 0)
+    // {
+    //   dataFile.print('+');
+    // }
+    // if(abs(timeZone) < 10)
+    // {
+    //   dataFile.print('0');
+    // }
+    // dataFile.print(offsetString);
+    dataFile.print("+00:00,");
     dataFile.print(particleData[0]); // PM1.0 (standard)
     dataFile.print(",");
     dataFile.print(particleData[1]); // PM2.5 (standard)
