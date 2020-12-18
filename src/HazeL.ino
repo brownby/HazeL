@@ -19,6 +19,7 @@
 #include <SD.h>
 #include <Wire.h>
 #include "secrets.h"
+#include "HM3301.h"
 
 // Make sure you have these four libraries installed in Documents/Arduino/libraries
 #include <U8g2lib.h>
@@ -36,8 +37,7 @@
 #define SENSOR_ADDR 0x40 // I2C address of dust sensor
 #define CUR_YEAR 2020 // for GPS first fix error checking
 
-WiFiClient client;
-const char server[] = "api.thingspeak.com";
+HM3301 dustSensor;
 
 File dataFile;
 char dataFileName[] = "data.csv";
@@ -60,33 +60,9 @@ volatile bool buttonISREn = false;
 bool ledFlag = false;
 uint8_t ledCount = 0;
 
-/* 
-Array for parsed dust sensor data
-particleData[0]  = PM1.0, standard  (ug/m^3)
-particleData[1]  = PM2.5, standard  (ug/m^3)
-particleData[2]  = PM10.0, standard (ug/m^3)
-particleData[3]  = PM1.0, atmo  (ug/m^3)
-particleData[4]  = PM2.5, atmo  (ug/m^3)
-particleData[5]  = PM10.0, atmo (ug/m^3)
-particleData[6]  = >0.3um  (pcs/L)
-particleData[7]  = >0.5um  (pcs/L)
-particleData[8]  = >1.0um  (pcs/L)
-particleData[9]  = >2.5um  (pcs/L)
-particleData[10] = >5.0um  (pcs/L)
-particleData[11] = >10.0um (pcs/L)
-*/
-uint16_t particleData[12];
-
-uint8_t i2c_buf[30]; // data buffer for pulling data from dust sensor
-
 bool firstLineDone = false; // flag for first line (titles) having been read
 uint32_t lastLinePosition = 0;
 char sd_buf[200]; // buffer to store single SD card line
-char tspeak_buf[5000]; // buffer for storing multiple rows of data from the CSV for ThingSpeak bulk updates
-char status_buf[20]; // buffer for status text
-uint8_t colPositions[17] = {0}; // array to store indices of commas in sd_buf, indicating column delineations
-unsigned long prevFileSize = 0; // last recorded file size
-unsigned long bytesLeft = 0; // bytes left in file to update to ThingSpeak
 
 void setup() {
   // initialize Serial port
@@ -170,7 +146,7 @@ void setup() {
   }
 
   // Initialize dust sensor
-  if(!initDustSensor())
+  if(!dustSensor.begin())
   {
     Serial.println("Failed to initialize dust sensor");
     display("Dust sensor init failed", 16, true, false);
@@ -209,7 +185,6 @@ void loop() {
     buttonFlag = true;
   }
 
-
   // Read sensor and update SD card every SAMP_TIME milliseconds
   if(curMillis - prevSampMillis >= SAMP_TIME)
   {
@@ -240,66 +215,6 @@ void buttonISR()
     buttonISREn = false;
   }
 }
-
-// sends initial command to dust sensor 
-bool initDustSensor()
-{
-  bool initSuccess;
-  Wire.beginTransmission(SENSOR_ADDR);
-  Wire.write(0x88); // select command
-  initSuccess = Wire.endTransmission();
-  // endTransmission() returns 0 on a success
-
-  return !initSuccess;
-}
-
-// return false on a timeout of 10ms
-bool readDustSensor(uint8_t *data, uint32_t data_len)
-{
-  uint32_t timeOutCnt = 0;
-  Wire.requestFrom(SENSOR_ADDR, 29);
-  while(data_len != Wire.available())
-  {
-    timeOutCnt++;
-    if(timeOutCnt > 10) return false;
-    delay(1);
-  }
-  for(int i = 0; i < data_len; i++)
-  {
-    data[i] = Wire.read();
-  }
-  return true;
-}
-
-// moves raw data read from I2C bus into parsed buffer (particleData in this sketch)
-// returns false if checksum is invalid (and doesn't parse data, i.e. data_out will not change)
-bool parseSensorData(uint16_t *data_out, uint8_t *data_raw)
-{
-  int j = 0;
-  byte sum = 0;
-
-  for(int i = 0; i < 28; i++)
-  {
-    sum += data_raw[i];
-  }
-
-  // wrong checksum
-  if(sum != data_raw[28])
-  {
-    return false;
-  }
-  
-  for(int i = 4; i <=26 ; i += 2)
-  {
-    data_out[j] = (data_raw[i] << 8) | (data_raw[i+1]);
-    j++;
-  }
-
-  return true;
-}
-
-// updates to ThingSpeak in bulk updates of 5kB of data
-
 
 // update samples in SD card
 void updateSampleSD()
@@ -360,16 +275,23 @@ void updateSampleSD()
   }
   
   // Read dust sensor
-  while(!readDustSensor(i2c_buf, 29))
+  while(!dustSensor.read())
   {
     Serial.println("Sensor reading didn't work, trying again");
   }
 
-  // Parse dust sensor data
-  if(!parseSensorData(particleData, i2c_buf))
-  {
-    Serial.println("checksum incorrect, data will be stale");
-  }
+  uint16_t PM1p0_std = dustSensor.data.PM1p0_std;
+  uint16_t PM2p5_std = dustSensor.data.PM2p5_std;
+  uint16_t PM10p0_std = dustSensor.data.PM10p0_std;
+  uint16_t PM1p0_atm = dustSensor.data.PM1p0_atm;
+  uint16_t PM2p5_atm = dustSensor.data.PM2p5_atm;
+  uint16_t PM10p0_atm = dustSensor.data.PM10p0_atm;
+  uint16_t count_0p3um = dustSensor.data.count_0p3um;
+  uint16_t count_0p5um = dustSensor.data.count_0p5um;
+  uint16_t count_1p0um = dustSensor.data.count_1p0um;
+  uint16_t count_2p5um = dustSensor.data.count_2p5um;
+  uint16_t count_5p0um = dustSensor.data.count_5p0um;
+  uint16_t count_10p0um = dustSensor.data.count_10p0um;
 
   // Display data to serial monitor and OLED display
   // Store data on SD card
@@ -393,18 +315,18 @@ void updateSampleSD()
     Serial.print(localSecond);
     Serial.println(": ");
     
-    Serial.print("PM1.0 (standard): "); Serial.print(particleData[0]); Serial.println(" ug/m^3");
-    Serial.print("PM2.5 (standard): "); Serial.print(particleData[1]); Serial.println(" ug/m^3");
-    Serial.print("PM10.0 (standard): "); Serial.print(particleData[2]); Serial.println(" ug/m^3");
-    Serial.print("PM1.0 (atmospheric): "); Serial.print(particleData[3]); Serial.println(" ug/m^3");
-    Serial.print("PM2.5 (atmospheric): "); Serial.print(particleData[4]); Serial.println(" ug/m^3");
-    Serial.print("PM10.0 (atmospheric): "); Serial.print(particleData[5]); Serial.println(" ug/m^3");
-    Serial.print("Particle concentration (>=0.3um): "); Serial.print(particleData[6]); Serial.println(" pcs/L");
-    Serial.print("Particle concentration (>=0.5um): "); Serial.print(particleData[7]); Serial.println(" pcs/L");
-    Serial.print("Particle concentration (>=1.0um): "); Serial.print(particleData[8]); Serial.println(" pcs/L");
-    Serial.print("Particle concentration (>=2.5um): "); Serial.print(particleData[9]); Serial.println(" pcs/L");
-    Serial.print("Particle concentration (>=5.0um): "); Serial.print(particleData[10]); Serial.println(" pcs/L");
-    Serial.print("Particle concentration (>=10.0um): "); Serial.print(particleData[11]); Serial.println(" pcs/L");
+    Serial.print("PM1.0 (standard): "); Serial.print(PM1p0_std); Serial.println(" ug/m^3");
+    Serial.print("PM2.5 (standard): "); Serial.print(PM2p5_std); Serial.println(" ug/m^3");
+    Serial.print("PM10.0 (standard): "); Serial.print(PM10p0_std); Serial.println(" ug/m^3");
+    Serial.print("PM1.0 (atmospheric): "); Serial.print(PM1p0_atm); Serial.println(" ug/m^3");
+    Serial.print("PM2.5 (atmospheric): "); Serial.print(PM2p5_atm); Serial.println(" ug/m^3");
+    Serial.print("PM10.0 (atmospheric): "); Serial.print(PM10p0_atm); Serial.println(" ug/m^3");
+    Serial.print("Particle concentration (>=0.3um): "); Serial.print(count_0p3um); Serial.println(" pcs/L");
+    Serial.print("Particle concentration (>=0.5um): "); Serial.print(count_0p5um); Serial.println(" pcs/L");
+    Serial.print("Particle concentration (>=1.0um): "); Serial.print(count_1p0um); Serial.println(" pcs/L");
+    Serial.print("Particle concentration (>=2.5um): "); Serial.print(count_2p5um); Serial.println(" pcs/L");
+    Serial.print("Particle concentration (>=5.0um): "); Serial.print(count_5p0um); Serial.println(" pcs/L");
+    Serial.print("Particle concentration (>=10.0um): "); Serial.print(count_10p0um); Serial.println(" pcs/L");
     
     Serial.print("lat: ");
     Serial.print(gps.location.lat(), 2);
@@ -432,43 +354,30 @@ void updateSampleSD()
     dataFile.print(":");
     if(localSecond < 10) dataFile.print('0');
     dataFile.print(localSecond);
-    // if(timeZone < 0)
-    // {
-    //   dataFile.print('-');
-    // }
-    // else if(timeZone >= 0)
-    // {
-    //   dataFile.print('+');
-    // }
-    // if(abs(timeZone) < 10)
-    // {
-    //   dataFile.print('0');
-    // }
-    // dataFile.print(offsetString);
     dataFile.print("+00:00,");
-    dataFile.print(particleData[0]); // PM1.0 (standard)
+    dataFile.print(PM1p0_std); // PM1.0 (standard)
     dataFile.print(",");
-    dataFile.print(particleData[1]); // PM2.5 (standard)
+    dataFile.print(PM2p5_std); // PM2.5 (standard)
     dataFile.print(",");
-    dataFile.print(particleData[2]); // PM10.0 (standard)
+    dataFile.print(PM10p0_std); // PM10.0 (standard)
     dataFile.print(",");
-    dataFile.print(particleData[3]); // PM1.0 (atmo)
+    dataFile.print(PM1p0_atm); // PM1.0 (atmo)
     dataFile.print(",");
-    dataFile.print(particleData[4]); // PM2.5 (atmo)
+    dataFile.print(PM2p5_atm); // PM2.5 (atmo)
     dataFile.print(",");
-    dataFile.print(particleData[5]); // PM10.0 (atmo)
+    dataFile.print(PM10p0_atm); // PM10.0 (atmo)
     dataFile.print(",");
-    dataFile.print(particleData[6]); // >0.3um 
+    dataFile.print(count_0p3um); // >0.3um 
     dataFile.print(",");
-    dataFile.print(particleData[7]); // >0.5um
+    dataFile.print(count_0p5um); // >0.5um
     dataFile.print(",");
-    dataFile.print(particleData[8]); // >1.0um
+    dataFile.print(count_1p0um); // >1.0um
     dataFile.print(",");
-    dataFile.print(particleData[9]); // >2.5um
+    dataFile.print(count_2p5um); // >2.5um
     dataFile.print(",");
-    dataFile.print(particleData[10]); // >5.0um
+    dataFile.print(count_5p0um); // >5.0um
     dataFile.print(",");
-    dataFile.print(particleData[11]); // >10.0um
+    dataFile.print(count_10p0um); // >10.0um
     dataFile.print(",");
     dataFile.print(gps.location.lat(), 1);
     dataFile.print(",");
@@ -497,9 +406,9 @@ void updateSampleSD()
     char dayText[10];
     char yearText[10];
 
-    itoa(particleData[3], pm1p0Text, 10);
-    itoa(particleData[4], pm2p5Text, 10);
-    itoa(particleData[5], pm10p0Text, 10);
+    itoa(PM1p0_atm, pm1p0Text, 10);
+    itoa(PM2p5_atm, pm2p5Text, 10);
+    itoa(PM10p0_atm, pm10p0Text, 10);
 
     itoa(localHour, hourText, 10);
     itoa(localMinute, minuteText, 10);
@@ -651,8 +560,20 @@ void display(char* text, u8g2_uint_t height, bool clear, bool send)
   }
 }
 
-// Functions below this point are used for updating to ThingSpeak, not used in this version
+/*
+ * Functions below this point are used for updating to ThingSpeak, not used in this version
+ */
 
+WiFiClient client;
+const char server[] = "api.thingspeak.com";
+
+char tspeak_buf[5000]; // buffer for storing multiple rows of data from the CSV for ThingSpeak bulk updates
+char status_buf[20]; // buffer for status text
+uint8_t colPositions[17] = {0}; // array to store indices of commas in sd_buf, indicating column delineations
+unsigned long prevFileSize = 0; // last recorded file size
+unsigned long bytesLeft = 0; // bytes left in file to update to ThingSpeak
+
+// updates to ThingSpeak in bulk updates of 5kB of data
 void updateThingSpeak()
 {
   // Initialize tspeak_buf
