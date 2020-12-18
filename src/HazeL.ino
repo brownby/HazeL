@@ -188,17 +188,17 @@ void loop() {
   if(curMillis - prevSampMillis >= SAMP_TIME)
   {
     prevSampMillis = curMillis;
-    
+    if(curMillis - prevGpsMillis >= GPS_TIME)
+    {
+      gpsFlag = true;
+      prevGpsMillis = curMillis;
+    }
     updateSampleSD();
-    Serial.println("Updated sample in SD card");
-    Serial.println();
   }
 
   // Upload data.txt to serial monitor if buttonFlag has been set (inside buttonISR)
   if(buttonFlag)
   {
-    Serial.println("Updated to ThingSpeak");
-    Serial.println();
     buttonFlag = false;
     buttonISREn = true;
   }
@@ -225,52 +225,55 @@ void updateSampleSD()
   // disable button ISR (do I still want to do this?)
   buttonISREn = false;
 
-  // wake up GPS module
-  wakeGps();
+  int localYear;
+  int localMonth;
+  int localDay;
+  int localHour;
+  int localMinute;
+  int localSecond;
 
-  if(firstGpsRead)
+  BMP280_temp_t temp;
+  BMP280_press_t press;
+
+  if(gpsFlag)
   {
-    display("Reading GPS...", 16, true, false);
-    display("(GPS warming up)", 24, false, true);
-    firstGpsRead = false;
-  }
-  else{
-    display("Reading GPS...", 20, true, true);
-  }
+    // wake up GPS module
+    wakeGps();
 
-  // Read GPS data until it's valid
-  do
-  {
-    readGps();
-  } while (!(gps.date.isValid() && gps.time.isValid() && gps.location.isValid() && gps.altitude.isValid() && gps.date.year() == CUR_YEAR));
-  
-  // set time for now()
-  setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
+    if(firstGpsRead)
+    {
+      display("Reading GPS...", 16, true, false);
+      display("(GPS warming up)", 24, false, true);
+      firstGpsRead = false;
+    }
+    else{
+      display("Reading GPS...", 20, true, true);
+    }
 
-  // store UTC time
-  utcTime = now();
+    // Read GPS data until it's valid
+    do
+    {
+      readGps();
+    } while (!(gps.date.isValid() && gps.time.isValid() && gps.location.isValid() && gps.altitude.isValid() && gps.date.year() == CUR_YEAR));
+    
+    // set time for now()
+    setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
 
-  // convert to local time
-  // localTime = utcTime + SECS_PER_HOUR*timeZone; // TODO: conversion to local time zone, still some bugs that need to be resolved
-  localTime = utcTime;
-  int localYear = year(localTime);
-  int localMonth = month(localTime);
-  int localDay = day(localTime);
-  int localHour = hour(localTime);
-  int localMinute = minute(localTime);
-  int localSecond = second(localTime);
+    // store UTC time
+    utcTime = now();
 
-  // only consider time stamp fresh if it occurs after the previous
-  if((utcTime > prevTimeStamp) && (gps.time.age() < 2500))
-  {
-    Serial.println("Fresh timestamp");
-    prevTimeStamp = utcTime;
-    staleFlag = false;
-  }
-  else
-  {
-    Serial.println("Stale timestamp");
-    staleFlag = true;
+    // convert to local time
+    localTime = utcTime;
+    localYear = year(localTime);
+    localMonth = month(localTime);
+    localDay = day(localTime);
+    localHour = hour(localTime);
+    localMinute = minute(localTime);
+    localSecond = second(localTime);
+
+    // read temperature and pressure
+    temp = TPSensor.getTemperature();
+    press = TPSensor.getPressure();
   }
   
   // Read dust sensor
@@ -292,59 +295,81 @@ void updateSampleSD()
   uint16_t count_5p0um = dustSensor.data.count_5p0um;
   uint16_t count_10p0um = dustSensor.data.count_10p0um;
 
-  BMP280_temp_t temp = TPSensor.getTemperature();
-  BMP280_press_t press = TPSensor.getPressure();
-
   // Display data to serial monitor and OLED display
   // Store data on SD card
   dataFile = SD.open(dataFileName, FILE_WRITE);
   if(dataFile)
   {
     // Display time stamp and data in the serial monitor
-    Serial.print(localMonth);
-    Serial.print('/');
-    Serial.print(localDay);
-    Serial.print('/');
-    Serial.print(localYear);
-    Serial.print(' ');
-    if(localHour < 10) Serial.print('0');
-    Serial.print(localHour);
-    Serial.print(':') ;
-    if(localMinute < 10) Serial.print('0');
-    Serial.print(localMinute);
-    Serial.print(':');
-    if(localSecond < 10) Serial.print('0');
-    Serial.print(localSecond);
-    Serial.println(": ");
-    
-    Serial.print("PM1.0 (standard): "); Serial.print(PM1p0_std); Serial.println(" ug/m^3");
-    Serial.print("PM2.5 (standard): "); Serial.print(PM2p5_std); Serial.println(" ug/m^3");
-    Serial.print("PM10.0 (standard): "); Serial.print(PM10p0_std); Serial.println(" ug/m^3");
-    Serial.print("PM1.0 (atmospheric): "); Serial.print(PM1p0_atm); Serial.println(" ug/m^3");
-    Serial.print("PM2.5 (atmospheric): "); Serial.print(PM2p5_atm); Serial.println(" ug/m^3");
-    Serial.print("PM10.0 (atmospheric): "); Serial.print(PM10p0_atm); Serial.println(" ug/m^3");
-    Serial.print("Particle concentration (>=0.3um): "); Serial.print(count_0p3um); Serial.println(" pcs/L");
-    Serial.print("Particle concentration (>=0.5um): "); Serial.print(count_0p5um); Serial.println(" pcs/L");
-    Serial.print("Particle concentration (>=1.0um): "); Serial.print(count_1p0um); Serial.println(" pcs/L");
-    Serial.print("Particle concentration (>=2.5um): "); Serial.print(count_2p5um); Serial.println(" pcs/L");
-    Serial.print("Particle concentration (>=5.0um): "); Serial.print(count_5p0um); Serial.println(" pcs/L");
-    Serial.print("Particle concentration (>=10.0um): "); Serial.print(count_10p0um); Serial.println(" pcs/L");
 
-    Serial.print("Temperature: "); Serial.print(temp.integral); Serial.print('.'); Serial.print(temp.fractional); Serial.println(" \xB0\x43");
-    Serial.print("Pressure: "); Serial.print(press.integral); Serial.print('.'); Serial.print(press.fractional); Serial.println(" Pa");
+    // Print out timestamp and temperature when gpsFlag is set
+    if(gpsFlag)
+    {
+      Serial.print("# ");
+      Serial.print(curMillis);
+      Serial.print(',');
+      Serial.print(localYear);
+      Serial.print('-');
+      Serial.print(localMonth);
+      Serial.print('-');
+      Serial.print(localDay);
+      Serial.print('T');
+      if(localHour < 10) Serial.print('0');
+      Serial.print(localHour);
+      Serial.print(':') ;
+      if(localMinute < 10) Serial.print('0');
+      Serial.print(localMinute);
+      Serial.print(':');
+      if(localSecond < 10) Serial.print('0');
+      Serial.print(localSecond);
+      Serial.print("+00:00");
+
+      Serial.print(',');
+      Serial.print(gps.location.lat(), 5);
+      Serial.print(',');
+      Serial.print(gps.location.lng(), 5);
+      Serial.print(',');
+      Serial.print(gps.altitude.meters(), 2);
+
+      Serial.print(',');
+      Serial.print(temp.integral); Serial.print('.'); Serial.print(temp.fractional);
+      Serial.print(',');
+      Serial.print(press.integral); Serial.print('.'); Serial.println(press.fractional);
+    }
     
-    Serial.print("lat: ");
-    Serial.print(gps.location.lat(), 2);
-    Serial.print(", long: ");
-    Serial.print(gps.location.lng(), 2);
-    Serial.print(", alt: ");
-    Serial.println(gps.altitude.meters(), 2);
-    
-    // Update data.csv with the same information
+    Serial.print(PM1p0_std);
+    Serial.print(',');
+    Serial.print(PM2p5_std);
+    Serial.print(',');
+    Serial.print(PM10p0_std);
+    Serial.print(',');
+    Serial.print(PM1p0_atm);
+    Serial.print(',');
+    Serial.print(PM2p5_atm);
+    Serial.print(',');
+    Serial.print(PM10p0_atm);
+    Serial.print(',');
+    Serial.print(count_0p3um);
+    Serial.print(',');
+    Serial.print(count_0p5um);
+    Serial.print(',');
+    Serial.print(count_1p0um);
+    Serial.print(',');
+    Serial.print(count_2p5um);
+    Serial.print(',');
+    Serial.print(count_5p0um);
+    Serial.print(',');
+    Serial.println(count_10p0um);
+
+    // Update data.txt with the same information
     // char offsetString[5];
     // itoa(abs(timeZone), offsetString, 10);
 
-    // use ISO 8601 format for timestamp
+  if(gpsFlag)
+  {
+    dataFile.print("# ");
+    dataFile.print(curMillis);
+    dataFile.print(',');
     dataFile.print(localYear);
     dataFile.print('-');
     dataFile.print(localMonth);
@@ -353,13 +378,27 @@ void updateSampleSD()
     dataFile.print('T');
     if(localHour < 10) dataFile.print('0');
     dataFile.print(localHour);
-    dataFile.print(':');
+    dataFile.print(':') ;
     if(localMinute < 10) dataFile.print('0');
     dataFile.print(localMinute);
-    dataFile.print(":");
+    dataFile.print(':');
     if(localSecond < 10) dataFile.print('0');
     dataFile.print(localSecond);
-    dataFile.print("+00:00,");
+    dataFile.print("+00:00");
+
+    dataFile.print(',');
+    dataFile.print(gps.location.lat(), 5);
+    dataFile.print(',');
+    dataFile.print(gps.location.lng(), 5);
+    dataFile.print(',');
+    dataFile.print(gps.altitude.meters(), 2);
+
+    dataFile.print(',');
+    dataFile.print(temp.integral); dataFile.print('.'); dataFile.print(temp.fractional);
+    dataFile.print(',');
+    dataFile.print(press.integral); dataFile.print('.'); dataFile.println(press.fractional);
+  }
+
     dataFile.print(PM1p0_std); // PM1.0 (standard)
     dataFile.print(",");
     dataFile.print(PM2p5_std); // PM2.5 (standard)
@@ -382,22 +421,7 @@ void updateSampleSD()
     dataFile.print(",");
     dataFile.print(count_5p0um); // >5.0um
     dataFile.print(",");
-    dataFile.print(count_10p0um); // >10.0um
-    dataFile.print(",");
-    dataFile.print(gps.location.lat(), 1);
-    dataFile.print(",");
-    dataFile.print(gps.location.lng(), 1);
-    dataFile.print(",");
-    dataFile.print(int(gps.altitude.meters()));
-    dataFile.print(",");
-    if(staleFlag)
-    {
-      dataFile.println("stale gps");
-    }
-    else
-    {
-      dataFile.println("good");
-    }
+    dataFile.println(count_10p0um); // >10.0um
     dataFile.close();
 
     char displayText[50];
@@ -453,10 +477,6 @@ void updateSampleSD()
       strcat(timeText, "0");
     }
     strcat(timeText, minuteText);
-    if(staleFlag) // if data point has stale time stamp, display (!) next to time
-    {
-      strcat(timeText, "(!)");
-    }
     display(timeText, 32, false, true);
 
     ledFlag = true;
@@ -468,7 +488,11 @@ void updateSampleSD()
   }
 
   // Put GPS module to sleep
-  sleepGps();
+  if(gpsFlag)
+  {
+    sleepGps();
+    gpsFlag = false;
+  }
 
   // Re-enable buttonISR
   buttonISREn = true;
@@ -494,7 +518,7 @@ void readGps()
   {
     if(gps.encode(Serial1.read()))
     {
-      Serial.println("GPS data successfully encoded");
+      // Serial.println("GPS data successfully encoded");
     }
   }
 }
@@ -523,14 +547,6 @@ void sendGpsCommand(const char* cmd)
   Serial1.write('*');
   Serial1.print(checksum, HEX);
   Serial1.write("\r\n");
-  
-  Serial.print("Command sent to GPS module: ");
-  Serial.write('$');
-  Serial.write(finalCmd);
-  Serial.write('*');
-  Serial.print(checksum, HEX);
-  Serial.write("\r\n");
-
 }
 
 // create a checksum for GPS command
