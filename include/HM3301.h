@@ -26,11 +26,13 @@ class HM3301 {
 public:
   HM3301(void);
   bool begin(uint8_t i2c_addr = HM3301_I2C_ADDR_DEFAULT);
-  bool readRaw(uint8_t *raw_data, uint32_t data_len = 29);
   bool read();
   bool read(uint16_t *data);
 
   HM3301_data_t data;
+
+private:
+  bool readRaw(uint8_t *raw_data, uint32_t data_len = 29);
 };
 
 

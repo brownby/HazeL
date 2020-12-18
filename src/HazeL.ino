@@ -26,24 +26,26 @@
 #include <TinyGPS++.h>
 #include <TimeLib.h>
 #include <WiFi101.h>
+#include "Seeed_BMP280.h"
 
-#define SAMP_TIME 5000 // number of ms between sensor readings
+#define SAMP_TIME 1000 // number of ms between sensor readings
 #define BLINK_TIME 300 // time in ms between LED blinks on successful write to SD
-#define WIFI_TIME 30000 // number of ms between WiFi updates in continual update mode
+#define GPS_TIME 10000 // time between GPS reads
 #define BLINK_CNT 3 // number of times to blink LED on successful write
 #define BUTTON_PIN A2 // pin for button that triggers ThingSpeak updates
 #define SWITCH_PIN A3 // pin for switch that sets continual update mode
 #define SD_CS_PIN 4 // CS pin of SD card, 4 on SD MKR proto shield
-#define SENSOR_ADDR 0x40 // I2C address of dust sensor
 #define CUR_YEAR 2020 // for GPS first fix error checking
 
 HM3301 dustSensor;
+BMP280 TPSensor;
 
 File dataFile;
-char dataFileName[] = "data.csv";
+char dataFileName[] = "data.txt";
 
 TinyGPSPlus gps;
 bool firstGpsRead = true;
+bool gpsFlag = false;
 
 time_t prevTimeStamp;
 
@@ -51,7 +53,7 @@ U8G2_SSD1306_128X64_ALT0_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 
 unsigned long prevSampMillis = 0;
 unsigned long prevLedMillis = 0;
-unsigned long prevWiFiMillis = 0;
+unsigned long prevGpsMillis = 0;
 unsigned long curMillis;
 
 volatile bool buttonFlag = false;
@@ -117,23 +119,25 @@ void setup() {
     dataFile = SD.open(dataFileName, FILE_WRITE);
     if(dataFile)
     {
-      dataFile.print("Timestamp,");
-      dataFile.print("Particle concentration (PM1.0 standard) (ug/m^3),");
-      dataFile.print("Particle concentration (PM2.5 standard) (ug/m^3),");
-      dataFile.print("Particle concentration (PM10.0 standard) (ug/m^3),");
-      dataFile.print("Particle concentration (PM1.0 atmospheric) (ug/m^3),");
-      dataFile.print("Particle concentration (PM2.5 atmospheric) (ug/m^3),");
-      dataFile.print("Particle concentration (PM10.0 atmospheric) (ug/m^3),");
-      dataFile.print("Particle concentration (>=0.3um) (pcs/L),");
-      dataFile.print("Particle concentration (>=0.5um) (pcs/L),");
-      dataFile.print("Particle concentration (>=1.0um) (pcs/L),");
-      dataFile.print("Particle concentration (>=2.5um) (pcs/L),");
-      dataFile.print("Particle concentration (>=5.0um) (pcs/L),");
-      dataFile.print("Particle concentration (>=10.0um) (pcs/L),");
-      dataFile.print("Latitude,");
-      dataFile.print("Longitude,");
-      dataFile.print("Elevation,");
-      dataFile.println("Status,");
+      // dataFile.print("Timestamp,");
+      // dataFile.print("Particle concentration (PM1.0 standard) (ug/m^3),");
+      // dataFile.print("Particle concentration (PM2.5 standard) (ug/m^3),");
+      // dataFile.print("Particle concentration (PM10.0 standard) (ug/m^3),");
+      // dataFile.print("Particle concentration (PM1.0 atmospheric) (ug/m^3),");
+      // dataFile.print("Particle concentration (PM2.5 atmospheric) (ug/m^3),");
+      // dataFile.print("Particle concentration (PM10.0 atmospheric) (ug/m^3),");
+      // dataFile.print("Particle concentration (>=0.3um) (pcs/L),");
+      // dataFile.print("Particle concentration (>=0.5um) (pcs/L),");
+      // dataFile.print("Particle concentration (>=1.0um) (pcs/L),");
+      // dataFile.print("Particle concentration (>=2.5um) (pcs/L),");
+      // dataFile.print("Particle concentration (>=5.0um) (pcs/L),");
+      // dataFile.print("Particle concentration (>=10.0um) (pcs/L),");
+      // dataFile.print("Temperature (\xb0\x43)");
+      // dataFile.print("Pressure (Pa)");
+      // dataFile.print("Latitude,");
+      // dataFile.print("Longitude,");
+      // dataFile.print("Elevation,");
+      // dataFile.println("CurLine,");
       dataFile.close();  
     }
     else
@@ -153,6 +157,8 @@ void setup() {
     display("Reset device", 24, false, true);
     while(true);
   }
+
+  TPSensor.init();
 
   // Attach ISR for flipping buttonFlag when button is pressed
   attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), buttonISR, RISING);
@@ -178,26 +184,19 @@ void loop() {
     }
   }
 
-  // Set WiFi flag to update to ThingSpeak if switch is set to continual update mode
-  if((curMillis - prevWiFiMillis >= WIFI_TIME) && (!digitalRead(SWITCH_PIN)))
-  {
-    prevWiFiMillis = curMillis;
-    buttonFlag = true;
-  }
-
   // Read sensor and update SD card every SAMP_TIME milliseconds
   if(curMillis - prevSampMillis >= SAMP_TIME)
   {
     prevSampMillis = curMillis;
+    
     updateSampleSD();
     Serial.println("Updated sample in SD card");
     Serial.println();
   }
 
-  // Update to ThingSpeak if buttonFlag has been set (inside buttonISR)
+  // Upload data.txt to serial monitor if buttonFlag has been set (inside buttonISR)
   if(buttonFlag)
   {
-    updateThingSpeak();
     Serial.println("Updated to ThingSpeak");
     Serial.println();
     buttonFlag = false;
@@ -293,6 +292,9 @@ void updateSampleSD()
   uint16_t count_5p0um = dustSensor.data.count_5p0um;
   uint16_t count_10p0um = dustSensor.data.count_10p0um;
 
+  BMP280_temp_t temp = TPSensor.getTemperature();
+  BMP280_press_t press = TPSensor.getPressure();
+
   // Display data to serial monitor and OLED display
   // Store data on SD card
   dataFile = SD.open(dataFileName, FILE_WRITE);
@@ -327,6 +329,9 @@ void updateSampleSD()
     Serial.print("Particle concentration (>=2.5um): "); Serial.print(count_2p5um); Serial.println(" pcs/L");
     Serial.print("Particle concentration (>=5.0um): "); Serial.print(count_5p0um); Serial.println(" pcs/L");
     Serial.print("Particle concentration (>=10.0um): "); Serial.print(count_10p0um); Serial.println(" pcs/L");
+
+    Serial.print("Temperature: "); Serial.print(temp.integral); Serial.print('.'); Serial.print(temp.fractional); Serial.println(" \xB0\x43");
+    Serial.print("Pressure: "); Serial.print(press.integral); Serial.print('.'); Serial.print(press.fractional); Serial.println(" Pa");
     
     Serial.print("lat: ");
     Serial.print(gps.location.lat(), 2);
@@ -561,7 +566,7 @@ void display(char* text, u8g2_uint_t height, bool clear, bool send)
 }
 
 /*
- * Functions below this point are used for updating to ThingSpeak, not used in this version
+ * Functions and variables below this point are used for updating to ThingSpeak, not used in this version
  */
 
 WiFiClient client;
