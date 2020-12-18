@@ -47,6 +47,13 @@ TinyGPSPlus gps;
 bool firstGpsRead = true;
 bool gpsFlag = false;
 
+int localYear;
+int localMonth;
+int localDay;
+int localHour;
+int localMinute;
+int localSecond;
+
 time_t prevTimeStamp;
 
 U8G2_SSD1306_128X64_ALT0_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
@@ -224,13 +231,6 @@ void updateSampleSD()
 
   // disable button ISR (do I still want to do this?)
   buttonISREn = false;
-
-  int localYear;
-  int localMonth;
-  int localDay;
-  int localHour;
-  int localMinute;
-  int localSecond;
 
   BMP280_temp_t temp;
   BMP280_press_t press;
