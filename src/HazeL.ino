@@ -28,14 +28,14 @@
 #include <WiFi101.h>
 #include "Seeed_BMP280.h"
 
-#define SAMP_TIME 1000 // number of ms between sensor readings
-#define BLINK_TIME 300 // time in ms between LED blinks on successful write to SD
+#define SAMP_TIME 2500 // number of ms between sensor readings
+#define BLINK_TIME 30 // time in ms between LED blinks on successful write to SD
 #define GPS_TIME 10000 // time between GPS reads
 #define BLINK_CNT 3 // number of times to blink LED on successful write
 #define BUTTON_PIN A2 // pin for button that triggers ThingSpeak updates
 #define SWITCH_PIN A3 // pin for switch that sets continual update mode
 #define SD_CS_PIN 4 // CS pin of SD card, 4 on SD MKR proto shield
-#define CUR_YEAR 2020 // for GPS first fix error checking
+#define CUR_YEAR 2021 // for GPS first fix error checking
 
 HM3301 dustSensor;
 BMP280 TPSensor;
