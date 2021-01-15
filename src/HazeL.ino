@@ -229,6 +229,7 @@ void loop() {
   {
     buttonFlag = false;
     buttonISREn = true;
+    uploadSerial();
   }
 
 }
@@ -328,61 +329,61 @@ void updateSampleSD()
     // Print out timestamp and temperature when gpsFlag is set
     if(gpsFlag)
     {
-      Serial.print("# ");
-      Serial.print(curMillis);
-      Serial.print(',');
-      Serial.print(localYear);
-      Serial.print('-');
-      Serial.print(localMonth);
-      Serial.print('-');
-      Serial.print(localDay);
-      Serial.print('T');
-      if(localHour < 10) Serial.print('0');
-      Serial.print(localHour);
-      Serial.print(':') ;
-      if(localMinute < 10) Serial.print('0');
-      Serial.print(localMinute);
-      Serial.print(':');
-      if(localSecond < 10) Serial.print('0');
-      Serial.print(localSecond);
-      Serial.print("+00:00");
+      // Serial.print("# ");
+      // Serial.print(curMillis);
+      // Serial.print(',');
+      // Serial.print(localYear);
+      // Serial.print('-');
+      // Serial.print(localMonth);
+      // Serial.print('-');
+      // Serial.print(localDay);
+      // Serial.print('T');
+      // if(localHour < 10) Serial.print('0');
+      // Serial.print(localHour);
+      // Serial.print(':') ;
+      // if(localMinute < 10) Serial.print('0');
+      // Serial.print(localMinute);
+      // Serial.print(':');
+      // if(localSecond < 10) Serial.print('0');
+      // Serial.print(localSecond);
+      // Serial.print("+00:00");
 
-      Serial.print(',');
-      Serial.print(gps.location.lat(), 5);
-      Serial.print(',');
-      Serial.print(gps.location.lng(), 5);
-      Serial.print(',');
-      Serial.print(gps.altitude.meters(), 2);
+      // Serial.print(',');
+      // Serial.print(gps.location.lat(), 5);
+      // Serial.print(',');
+      // Serial.print(gps.location.lng(), 5);
+      // Serial.print(',');
+      // Serial.print(gps.altitude.meters(), 2);
 
-      Serial.print(',');
-      Serial.print(temp.integral); Serial.print('.'); Serial.print(temp.fractional);
-      Serial.print(',');
-      Serial.print(press.integral); Serial.print('.'); Serial.println(press.fractional);
+      // Serial.print(',');
+      // Serial.print(temp.integral); Serial.print('.'); Serial.print(temp.fractional);
+      // Serial.print(',');
+      // Serial.print(press.integral); Serial.print('.'); Serial.println(press.fractional);
     }
     
-    Serial.print(PM1p0_std);
-    Serial.print(',');
-    Serial.print(PM2p5_std);
-    Serial.print(',');
-    Serial.print(PM10p0_std);
-    Serial.print(',');
-    Serial.print(PM1p0_atm);
-    Serial.print(',');
-    Serial.print(PM2p5_atm);
-    Serial.print(',');
-    Serial.print(PM10p0_atm);
-    Serial.print(',');
-    Serial.print(count_0p3um);
-    Serial.print(',');
-    Serial.print(count_0p5um);
-    Serial.print(',');
-    Serial.print(count_1p0um);
-    Serial.print(',');
-    Serial.print(count_2p5um);
-    Serial.print(',');
-    Serial.print(count_5p0um);
-    Serial.print(',');
-    Serial.println(count_10p0um);
+    // Serial.print(PM1p0_std);
+    // Serial.print(',');
+    // Serial.print(PM2p5_std);
+    // Serial.print(',');
+    // Serial.print(PM10p0_std);
+    // Serial.print(',');
+    // Serial.print(PM1p0_atm);
+    // Serial.print(',');
+    // Serial.print(PM2p5_atm);
+    // Serial.print(',');
+    // Serial.print(PM10p0_atm);
+    // Serial.print(',');
+    // Serial.print(count_0p3um);
+    // Serial.print(',');
+    // Serial.print(count_0p5um);
+    // Serial.print(',');
+    // Serial.print(count_1p0um);
+    // Serial.print(',');
+    // Serial.print(count_2p5um);
+    // Serial.print(',');
+    // Serial.print(count_5p0um);
+    // Serial.print(',');
+    // Serial.println(count_10p0um);
 
     // Update data.txt with the same information
     // char offsetString[5];
@@ -533,11 +534,20 @@ void uploadSerial()
     delay(5000);
     return;
   }
+  else
+  {
+    display("Uploading via serial", 20, true, true);
+#ifdef DEBUG_PRINT
+    Serial.println("Serial upload initiated");
+#endif
+    delay(5000);
+  }
+  
 
   bool xFound = false; // find the x, indicating last line read
   uint32_t xPosition;  // store position of x to delete it later
   int i = 0;
-  dataFile = SD.open(dataFileName, FILE_READ);
+  dataFile = SD.open(dataFileName, O_RDWR);
   if(dataFile)
   {
     while(dataFile.available())
@@ -551,6 +561,8 @@ void uploadSerial()
         {
           xFound = true;
           xPosition = dataFile.position();
+          dataFile.read(); // read '\r'
+          dataFile.read(); // read '\n'
         }
         continue; // read next character, don't do any of the rest of this loop
       }
@@ -568,19 +580,22 @@ void uploadSerial()
         }
       }
     }
-  }
-  dataFile.close(); // done reading
 
-  // Now remove x, add it to the end of the file
-  dataFile = SD.open(dataFileName, FILE_WRITE);
-  if(dataFile)
-  {
-    dataFile.seek(xPosition); // move to position of current 'x'
-    dataFile.print(0); // delete 'x' (overwrite with 0)
-    dataFile.seek(dataFile.size()); // go to end of file
+    // Now remove x, add it to the end of the file
+    dataFile.seek(xPosition-1); // move to position of current 'x'
+    dataFile.write((uint8_t)0); // delete 'x' (overwrite with 0)
+    dataFile.write((uint8_t)0); // delete '\r'
+    dataFile.write((uint8_t)0); // delete '\n'
+    dataFile.seek(dataFile.size()-1); // go to end of file
     dataFile.println('x'); // an 'x' line
   }
-  dataFile.close(); // done writing
+  else
+  {
+#ifdef DEBUG_PRINT
+    Serial.println("Couldn't open file");
+#endif
+  }
+  dataFile.close();
 }
 
 // blink LED
