@@ -36,6 +36,7 @@
 #define SWITCH_PIN A3 // pin for switch that sets continual update mode
 #define SD_CS_PIN 4 // CS pin of SD card, 4 on SD MKR proto shield
 #define CUR_YEAR 2021 // for GPS first fix error checking
+#define DEBUG_PRINT
 
 HM3301 dustSensor;
 BMP280 TPSensor;
@@ -70,6 +71,7 @@ bool ledFlag = false;
 uint8_t ledCount = 0;
 
 bool firstLineDone = false; // flag for first line (titles) having been read
+bool newDataFile = false;
 uint32_t lastLinePosition = 0;
 char sd_buf[200]; // buffer to store single SD card line
 
@@ -88,6 +90,9 @@ void setup() {
 
   display("Initializing...", 20, true, true);
   delay(2500);
+#ifdef DEBUG_PRINT
+  Serial.println("Initializing...");
+#endif
 
   // Set relevant pin modes
   pinMode(LED_BUILTIN, OUTPUT);
@@ -95,21 +100,27 @@ void setup() {
   pinMode(SWITCH_PIN, INPUT_PULLUP);
   pinMode(SD_CS_PIN, OUTPUT);
 
+#ifdef DEBUG_PRINT
   Serial.println("Initialize SD");
+#endif
   display("Checking SD", 20, true, true);
   delay(2500);
 
   // Initialize SD card communication
   if(!SD.begin(SD_CS_PIN))
   {
+#ifdef DEBUG_PRINT
     Serial.println("Card failed");
+#endif
     display("SD card failed", 16, true, false);
     display("Reset device", 24, false, true);
     while(true);
   }
   else
   {
+#ifdef DEBUG_PRINT
     Serial.println("Card initialized successfully");
+#endif
     display("SD card detected", 20, true, true);
   }
   delay(2500);
@@ -123,6 +134,11 @@ void setup() {
     strcat(displayBuffer, dataFileName);
     display(displayBuffer, 20, true, true);
     delay(2500);
+#ifdef DEBUG_PRINT
+    Serial.print("Creating ");
+    Serial.println(dataFileName);
+#endif
+    // newDataFile = true;
     dataFile = SD.open(dataFileName, FILE_WRITE);
     if(dataFile)
     {
@@ -145,11 +161,14 @@ void setup() {
       // dataFile.print("Longitude,");
       // dataFile.print("Elevation,");
       // dataFile.println("CurLine,");
+      dataFile.println('x'); // mark first line with an x, will use an "x" at the end of a line to indicate that this is the last line that was read from the SD card
       dataFile.close();  
     }
     else
     {
+#ifdef DEBUG_PRINT
       Serial.println("Couldn't open file");
+#endif
       display("Unable to open file", 16, true, false);
       display("Check SD, reset device", 24, false, true);
     }
@@ -159,7 +178,9 @@ void setup() {
   // Initialize dust sensor
   if(!dustSensor.begin())
   {
+#ifdef DEBUG_PRINT
     Serial.println("Failed to initialize dust sensor");
+#endif
     display("Dust sensor init failed", 16, true, false);
     display("Reset device", 24, false, true);
     while(true);
@@ -279,7 +300,9 @@ void updateSampleSD()
   // Read dust sensor
   while(!dustSensor.read())
   {
+#ifdef DEBUG_PRINT
     Serial.println("Sensor reading didn't work, trying again");
+#endif
   }
 
   uint16_t PM1p0_std = dustSensor.data.PM1p0_std;
@@ -483,7 +506,9 @@ void updateSampleSD()
   }
   else
   {
+#ifdef DEBUG_PRINT
     Serial.println("Couldn't open file");
+#endif
     display("Couldn't open file", 20, true, true);
   }
 
@@ -496,6 +521,55 @@ void updateSampleSD()
 
   // Re-enable buttonISR
   buttonISREn = true;
+}
+
+// upload SD card data over serial port
+void uploadSerial()
+{
+  // First check is USB is connected
+  if(!Serial)
+  {
+    display("USB not connected", 20, true, true);
+    delay(5000);
+    return;
+  }
+
+  bool xFound = false; // find the x, indicating last line read
+  uint32_t xPosition;  // store position of x to delete it later
+  int i = 0;
+  dataFile = SD.open(dataFileName, FILE_READ);
+  if(dataFile)
+  {
+    while(dataFile.available())
+    {
+      char c = dataFile.read();
+      
+      // first loop through to find the x
+      if(!xFound)
+      {
+        if(c == 'x')
+        {
+          xFound = true;
+          xPosition = dataFile.position();
+        }
+        continue; // read next character, don't do any of the rest of this loop
+      }
+      else
+      {
+        if(c == '\n')
+        {
+          i = 0; // reset index
+          Serial.println(sd_buf); // print line to serial port
+          memset(sd_buf, 0, sizeof(sd_buf)); // reset buffer holding line to 0
+        }
+        else
+        {
+          sd_buf[i++] = c;
+        }
+      }
+    }
+
+  }
 }
 
 // blink LED
@@ -518,7 +592,9 @@ void readGps()
   {
     if(gps.encode(Serial1.read()))
     {
-      // Serial.println("GPS data successfully encoded");
+#ifdef DEBUG_PRINT
+      Serial.println("GPS data successfully encoded");
+#endif
     }
   }
 }
