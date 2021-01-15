@@ -161,7 +161,7 @@ void setup() {
       // dataFile.print("Longitude,");
       // dataFile.print("Elevation,");
       // dataFile.println("CurLine,");
-      dataFile.println('x'); // mark first line with an x, will use an "x" at the end of a line to indicate that this is the last line that was read from the SD card
+      dataFile.println('x'); // mark first line with an x, will use aline with an 'x' to indicate the location of the last line read
       dataFile.close();  
     }
     else
@@ -564,12 +564,23 @@ void uploadSerial()
         }
         else
         {
-          sd_buf[i++] = c;
+          sd_buf[i++] = c; // add character to buffer holding current line
         }
       }
     }
-
   }
+  dataFile.close(); // done reading
+
+  // Now remove x, add it to the end of the file
+  dataFile = SD.open(dataFileName, FILE_WRITE);
+  if(dataFile)
+  {
+    dataFile.seek(xPosition); // move to position of current 'x'
+    dataFile.print(0); // delete 'x' (overwrite with 0)
+    dataFile.seek(dataFile.size()); // go to end of file
+    dataFile.println('x'); // an 'x' line
+  }
+  dataFile.close(); // done writing
 }
 
 // blink LED
