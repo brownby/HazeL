@@ -95,9 +95,9 @@ void setup() {
 
   display("Initializing...", 20, true, true);
   delay(2500);
-#ifdef DEBUG_PRINT
+  #ifdef DEBUG_PRINT
   Serial.println("Initializing...");
-#endif
+  #endif
 
   // Set relevant pin modes
   pinMode(LED_BUILTIN, OUTPUT);
@@ -105,27 +105,27 @@ void setup() {
   pinMode(SWITCH_PIN, INPUT_PULLUP);
   pinMode(SD_CS_PIN, OUTPUT);
 
-#ifdef DEBUG_PRINT
+  #ifdef DEBUG_PRINT
   Serial.println("Initialize SD");
-#endif
+  #endif
   display("Checking SD", 20, true, true);
   delay(2500);
 
   // Initialize SD card communication
   if(!SD.begin(SD_CS_PIN))
   {
-#ifdef DEBUG_PRINT
+    #ifdef DEBUG_PRINT
     Serial.println("Card failed");
-#endif
+    #endif
     display("SD card failed", 16, true, false);
     display("Reset device", 24, false, true);
     while(true);
   }
   else
   {
-#ifdef DEBUG_PRINT
+    #ifdef DEBUG_PRINT
     Serial.println("Card initialized successfully");
-#endif
+    #endif
     display("SD card detected", 20, true, true);
   }
   delay(2500);
@@ -139,10 +139,10 @@ void setup() {
     strcat(displayBuffer, dataFileName);
     display(displayBuffer, 20, true, true);
     delay(2500);
-#ifdef DEBUG_PRINT
+    #ifdef DEBUG_PRINT
     Serial.print("Creating ");
     Serial.println(dataFileName);
-#endif
+    #endif
     // newDataFile = true;
     dataFile = SD.open(dataFileName, FILE_WRITE);
     if(dataFile)
@@ -152,9 +152,9 @@ void setup() {
     }
     else
     {
-#ifdef DEBUG_PRINT
+      #ifdef DEBUG_PRINT
       Serial.println("Couldn't open file");
-#endif
+      #endif
       display("Unable to open file", 16, true, false);
       display("Check SD, reset device", 24, false, true);
     }
@@ -164,9 +164,9 @@ void setup() {
   // Initialize dust sensor
   if(!dustSensor.begin())
   {
-#ifdef DEBUG_PRINT
+    #ifdef DEBUG_PRINT
     Serial.println("Failed to initialize dust sensor");
-#endif
+    #endif
     display("Dust sensor init failed", 16, true, false);
     display("Reset device", 24, false, true);
     while(true);
@@ -307,9 +307,9 @@ void updateSampleSD()
   // Read dust sensor
   while(!dustSensor.read())
   {
-#ifdef DEBUG_PRINT
+    #ifdef DEBUG_PRINT
     Serial.println("Sensor reading didn't work, trying again");
-#endif
+    #endif
   }
 
   uint16_t PM1p0_std = dustSensor.data.PM1p0_std;
@@ -513,9 +513,9 @@ void updateSampleSD()
   }
   else
   {
-#ifdef DEBUG_PRINT
+    #ifdef DEBUG_PRINT
     Serial.println("Couldn't open file");
-#endif
+    #endif
     display("Couldn't open file", 20, true, true);
   }
 
@@ -543,18 +543,18 @@ void uploadSerial()
   {
     display("Uploading data", 16, true, false);
     display("via serial port", 24, false, true);
-#ifdef DEBUG_PRINT
+    #ifdef DEBUG_PRINT
     Serial.println("Serial upload initiated");
-#endif
+    #endif
     delay(5000);
   }
   
   // if switch is high (to the left), upload entire file
   if(digitalRead(SWITCH_PIN))
   {
-#ifdef DEBUG_PRINT
+    #ifdef DEBUG_PRINT
     Serial.println("Mode 2, upload entire file");
-#endif
+    #endif
     int i = 0;
     dataFile = SD.open(dataFileName, FILE_READ);
     while(dataFile.available())
@@ -575,9 +575,9 @@ void uploadSerial()
   }
   else // if switch is low (to the right), only upload from the location in the file where last update ended
   {
-#ifdef DEBUG_PRINT
+    #ifdef DEBUG_PRINT
     Serial.println("Mode 3, incremental upload");
-#endif
+    #endif
     bool xFound = false; // find the x, indicating last line read
     uint32_t xPosition;  // store position of x to delete it later
     int i = 0;
@@ -617,9 +617,9 @@ void uploadSerial()
     }
     else
     {
-#ifdef DEBUG_PRINT
+      #ifdef DEBUG_PRINT
       Serial.println("Couldn't open file");
-#endif
+      #endif
     }
     // Now remove x, add it to the end of the file  
     dataFile.seek(0);
@@ -627,9 +627,9 @@ void uploadSerial()
     File tmpFile = SD.open("tmp.txt", FILE_WRITE);
     if(dataFile && tmpFile)
     {
-#ifdef DEBUG_PRINT
+      #ifdef DEBUG_PRINT
       Serial.println("Moving data into tmp.txt");
-#endif
+      #endif
       // Move data, minus the x and following CR and NL, into tmp.txt
       while(dataFile.available())
       {
@@ -644,21 +644,21 @@ void uploadSerial()
         tmpFile.write(c);
       }
 
-#ifdef DEBUG_PRINT
+      #ifdef DEBUG_PRINT
       Serial.println("Renaming and deleting old data file");
-#endif
+      #endif
       // Rename tmp.txt to data.txt, delete data.txt
       if (dataFile.rename("datatmp.txt"))
       {
-#ifdef DEBUG_PRINT
+        #ifdef DEBUG_PRINT
         Serial.println("Renamed data.txt to datatmp.txt");
-#endif
+        #endif
       }
       if (tmpFile.rename(dataFileName))
       {
-#ifdef DEBUG_PRINT
+        #ifdef DEBUG_PRINT
         Serial.println("Renamed tmp.txt to data.txt");
-#endif
+        #endif
       }
       dataFile.close();
       tmpFile.close();
@@ -666,18 +666,18 @@ void uploadSerial()
       
       tmpFile = SD.open(dataFileName, FILE_WRITE);
 
-#ifdef DEBUG_PRINT
+      #ifdef DEBUG_PRINT
       Serial.println("Moving x to end of new data file");
-#endif
+      #endif
       // tmpFile.seek(tmpFile.size()-1); // go to end of file
       tmpFile.println('x'); // an 'x' line
       tmpFile.close();
     }
     else
     {
-#ifdef DEBUG_PRINT
+      #ifdef DEBUG_PRINT
       Serial.println("Couldn't open tmp and data files");
-#endif
+      #endif
     }
   }
   buttonISREn = true;
@@ -703,9 +703,9 @@ void readGps()
   {
     if(gps.encode(Serial1.read()))
     {
-#ifdef DEBUG_PRINT
+      #ifdef DEBUG_PRINT
       Serial.println("GPS data successfully encoded");
-#endif
+      #endif
     }
   }
 }
@@ -735,14 +735,14 @@ void sendGpsCommand(const char* cmd)
   Serial1.print(checksum, HEX);
   Serial1.write("\r\n");
 
-#ifdef DEBUG_PRINT
+  #ifdef DEBUG_PRINT
   Serial.print("Command sent to GPS: ");
   Serial.write('$');
   Serial.write(finalCmd);
   Serial.write('*');
   Serial.print(checksum, HEX);
   Serial.write("\r\n");
-#endif
+  #endif
 }
 
 // create a checksum for GPS command
