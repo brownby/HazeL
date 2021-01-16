@@ -16,7 +16,8 @@
  */
 
 #include <SPI.h>
-#include <SD.h>
+// #include <SD.h>
+#include "SdFat.h"
 #include <Wire.h>
 #include "secrets.h"
 #include "HM3301.h"
@@ -41,6 +42,7 @@
 HM3301 dustSensor;
 BMP280 TPSensor;
 
+SdFat SD;
 File dataFile;
 char dataFileName[] = "data.txt";
 
@@ -251,9 +253,6 @@ void updateSampleSD()
   time_t localTime;
   time_t utcTime;
 
-  // disable button ISR (do I still want to do this?)
-  buttonISREn = false;
-
   BMP280_temp_t temp;
   BMP280_press_t press;
 
@@ -329,61 +328,61 @@ void updateSampleSD()
     // Print out timestamp and temperature when gpsFlag is set
     if(gpsFlag)
     {
-      // Serial.print("# ");
-      // Serial.print(curMillis);
-      // Serial.print(',');
-      // Serial.print(localYear);
-      // Serial.print('-');
-      // Serial.print(localMonth);
-      // Serial.print('-');
-      // Serial.print(localDay);
-      // Serial.print('T');
-      // if(localHour < 10) Serial.print('0');
-      // Serial.print(localHour);
-      // Serial.print(':') ;
-      // if(localMinute < 10) Serial.print('0');
-      // Serial.print(localMinute);
-      // Serial.print(':');
-      // if(localSecond < 10) Serial.print('0');
-      // Serial.print(localSecond);
-      // Serial.print("+00:00");
+      Serial.print("# ");
+      Serial.print(curMillis);
+      Serial.print(',');
+      Serial.print(localYear);
+      Serial.print('-');
+      Serial.print(localMonth);
+      Serial.print('-');
+      Serial.print(localDay);
+      Serial.print('T');
+      if(localHour < 10) Serial.print('0');
+      Serial.print(localHour);
+      Serial.print(':') ;
+      if(localMinute < 10) Serial.print('0');
+      Serial.print(localMinute);
+      Serial.print(':');
+      if(localSecond < 10) Serial.print('0');
+      Serial.print(localSecond);
+      Serial.print("+00:00");
 
-      // Serial.print(',');
-      // Serial.print(gps.location.lat(), 5);
-      // Serial.print(',');
-      // Serial.print(gps.location.lng(), 5);
-      // Serial.print(',');
-      // Serial.print(gps.altitude.meters(), 2);
+      Serial.print(',');
+      Serial.print(gps.location.lat(), 5);
+      Serial.print(',');
+      Serial.print(gps.location.lng(), 5);
+      Serial.print(',');
+      Serial.print(gps.altitude.meters(), 2);
 
-      // Serial.print(',');
-      // Serial.print(temp.integral); Serial.print('.'); Serial.print(temp.fractional);
-      // Serial.print(',');
-      // Serial.print(press.integral); Serial.print('.'); Serial.println(press.fractional);
+      Serial.print(',');
+      Serial.print(temp.integral); Serial.print('.'); Serial.print(temp.fractional);
+      Serial.print(',');
+      Serial.print(press.integral); Serial.print('.'); Serial.println(press.fractional);
     }
     
-    // Serial.print(PM1p0_std);
-    // Serial.print(',');
-    // Serial.print(PM2p5_std);
-    // Serial.print(',');
-    // Serial.print(PM10p0_std);
-    // Serial.print(',');
-    // Serial.print(PM1p0_atm);
-    // Serial.print(',');
-    // Serial.print(PM2p5_atm);
-    // Serial.print(',');
-    // Serial.print(PM10p0_atm);
-    // Serial.print(',');
-    // Serial.print(count_0p3um);
-    // Serial.print(',');
-    // Serial.print(count_0p5um);
-    // Serial.print(',');
-    // Serial.print(count_1p0um);
-    // Serial.print(',');
-    // Serial.print(count_2p5um);
-    // Serial.print(',');
-    // Serial.print(count_5p0um);
-    // Serial.print(',');
-    // Serial.println(count_10p0um);
+    Serial.print(PM1p0_std);
+    Serial.print(',');
+    Serial.print(PM2p5_std);
+    Serial.print(',');
+    Serial.print(PM10p0_std);
+    Serial.print(',');
+    Serial.print(PM1p0_atm);
+    Serial.print(',');
+    Serial.print(PM2p5_atm);
+    Serial.print(',');
+    Serial.print(PM10p0_atm);
+    Serial.print(',');
+    Serial.print(count_0p3um);
+    Serial.print(',');
+    Serial.print(count_0p5um);
+    Serial.print(',');
+    Serial.print(count_1p0um);
+    Serial.print(',');
+    Serial.print(count_2p5um);
+    Serial.print(',');
+    Serial.print(count_5p0um);
+    Serial.print(',');
+    Serial.println(count_10p0um);
 
     // Update data.txt with the same information
     // char offsetString[5];
@@ -520,23 +519,24 @@ void updateSampleSD()
     gpsFlag = false;
   }
 
-  // Re-enable buttonISR
-  buttonISREn = true;
 }
 
 // upload SD card data over serial port
 void uploadSerial()
 {
+  buttonISREn = false; // disable button ISR
   // First check is USB is connected
   if(!Serial)
   {
     display("USB not connected", 20, true, true);
     delay(5000);
+    buttonISREn = true;
     return;
   }
   else
   {
-    display("Uploading via serial", 20, true, true);
+    display("Uploading data", 16, true, false);
+    display("via serial port", 24, false, true);
 #ifdef DEBUG_PRINT
     Serial.println("Serial upload initiated");
 #endif
@@ -547,7 +547,7 @@ void uploadSerial()
   bool xFound = false; // find the x, indicating last line read
   uint32_t xPosition;  // store position of x to delete it later
   int i = 0;
-  dataFile = SD.open(dataFileName, O_RDWR);
+  dataFile = SD.open(dataFileName, FILE_READ);
   if(dataFile)
   {
     while(dataFile.available())
@@ -580,14 +580,7 @@ void uploadSerial()
         }
       }
     }
-
-    // Now remove x, add it to the end of the file
-    dataFile.seek(xPosition-1); // move to position of current 'x'
-    dataFile.write((uint8_t)0); // delete 'x' (overwrite with 0)
-    dataFile.write((uint8_t)0); // delete '\r'
-    dataFile.write((uint8_t)0); // delete '\n'
-    dataFile.seek(dataFile.size()-1); // go to end of file
-    dataFile.println('x'); // an 'x' line
+    dataFile.close();
   }
   else
   {
@@ -595,7 +588,46 @@ void uploadSerial()
     Serial.println("Couldn't open file");
 #endif
   }
-  dataFile.close();
+  // Now remove x, add it to the end of the file  
+  // Open temporary file and data.txt
+  File tmpFile = SD.open("tmp.txt", FILE_WRITE);
+  dataFile = SD.open(dataFileName, FILE_READ);
+  if(dataFile && tmpFile)
+  {
+    // Move data, minus the x and following CR and NL, into tmp.txt
+    while(dataFile.available())
+    {
+      char c = dataFile.read();
+      if (c == 'x')
+      {
+        // ignore x and following '\r' and '\n'
+        dataFile.read();
+        dataFile.read();
+        continue;
+      }
+      tmpFile.write(c);
+    }
+
+    // Rename tmp.txt to data.txt, delete data.txt
+    dataFile.rename("datatmp.txt");
+    tmpFile.rename(dataFileName);
+    dataFile.close();
+    tmpFile.close();
+    SD.remove("datatmp.txt");
+    
+    tmpFile = SD.open(dataFileName, O_RDWR);
+
+    tmpFile.seek(tmpFile.size()-1); // go to end of file
+    tmpFile.println('x'); // an 'x' line
+    tmpFile.close();
+  }
+  else
+  {
+#ifdef DEBUG_PRINT
+    Serial.println("Couldn't open tmp and data files");
+#endif
+  }
+  buttonISREn = true;
 }
 
 // blink LED
