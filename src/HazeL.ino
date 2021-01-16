@@ -259,6 +259,17 @@ void updateSampleSD()
     do
     {
       readGps();
+
+      // make GPS reads interruptible by the button being pressed
+      if (buttonFlag)
+      {
+        for (int i = 0; i < 10; i++)
+        {
+          sleepGps();
+          delay(10);
+        }
+        return;
+      }
     } while (!(gps.date.isValid() && gps.time.isValid() && gps.location.isValid() && gps.altitude.isValid() && gps.date.year() == CUR_YEAR));
     
     // set time for now()
@@ -560,6 +571,7 @@ void uploadSerial()
         Serial.write(c);
       }
     }
+    dataFile.close();
   }
   else // if switch is low (to the right), only upload from the location in the file where last update ended
   {
@@ -602,7 +614,6 @@ void uploadSerial()
           }
         }
       }
-      dataFile.close();
     }
     else
     {
@@ -611,11 +622,14 @@ void uploadSerial()
 #endif
     }
     // Now remove x, add it to the end of the file  
-    // Open temporary file and data.txt
+    dataFile.seek(0);
+    // Open temporary file
     File tmpFile = SD.open("tmp.txt", FILE_WRITE);
-    dataFile = SD.open(dataFileName, FILE_READ);
     if(dataFile && tmpFile)
     {
+#ifdef DEBUG_PRINT
+      Serial.println("Moving data into tmp.txt");
+#endif
       // Move data, minus the x and following CR and NL, into tmp.txt
       while(dataFile.available())
       {
@@ -630,16 +644,32 @@ void uploadSerial()
         tmpFile.write(c);
       }
 
+#ifdef DEBUG_PRINT
+      Serial.println("Renaming and deleting old data file");
+#endif
       // Rename tmp.txt to data.txt, delete data.txt
-      dataFile.rename("datatmp.txt");
-      tmpFile.rename(dataFileName);
+      if (dataFile.rename("datatmp.txt"))
+      {
+#ifdef DEBUG_PRINT
+        Serial.println("Renamed data.txt to datatmp.txt");
+#endif
+      }
+      if (tmpFile.rename(dataFileName))
+      {
+#ifdef DEBUG_PRINT
+        Serial.println("Renamed tmp.txt to data.txt");
+#endif
+      }
       dataFile.close();
       tmpFile.close();
       SD.remove("datatmp.txt");
       
-      tmpFile = SD.open(dataFileName, O_RDWR);
+      tmpFile = SD.open(dataFileName, FILE_WRITE);
 
-      tmpFile.seek(tmpFile.size()-1); // go to end of file
+#ifdef DEBUG_PRINT
+      Serial.println("Moving x to end of new data file");
+#endif
+      // tmpFile.seek(tmpFile.size()-1); // go to end of file
       tmpFile.println('x'); // an 'x' line
       tmpFile.close();
     }
