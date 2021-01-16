@@ -173,9 +173,6 @@ void setup() {
   // Attach ISR for flipping buttonFlag when button is pressed
   attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), buttonISR, RISING);
 
-  // put the GPS module to sleep
-  sleepGps();
-
   // enable button ISR
   buttonISREn = true;
 }
@@ -249,7 +246,11 @@ void updateSampleSD()
     }
 
     // wake up GPS module
-    wakeGps();
+    for (int i = 0; i < 10; i++)
+    {
+      wakeGps();
+      delay(10);
+    }
 
     // Read GPS data until it's valid
     do
