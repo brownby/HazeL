@@ -2,17 +2,13 @@
  * HazeL
  * Benjamin Y. Brown
  * 
- * Creates a file called "data.csv" on the SD card with columns for time stamp, PM concentrations, raw particle concentrations, and latitude and longitude
+ * Creates a file called "data.txt" on the SD card 
+ * Writes PM and raw concentration data every 2.5s to the SD card
  *
- * Device will bulk update to ThingSpeak when button is pressed (may take a few minutes depending on amount of data)
- * For automatic ThingSpeak updates every 30 seconds, pull SWITCH_PIN low
+ * When button is pressed, HazeL will upload the contents of the SD card through the serial port
+ * To upload the entirety of data.txt, pull SWITCH_PIN high
+ * To upload incrementally (only upload data collected since the last incremental upload), pull SWITCH_PIN low
  * 
- * Before uploading, enter the information for your WiFi SSID and password, 
- * as well as your ThingSpeak channel ID and write API key in "secrets.h"
- * 
- * GPS module may return stale time stamps depending on signal strength 
- * All data will be stored on SD card, regardless of staleness of time stamps
- * but only data points with unique time stamps will be updated to ThingSpeak
  */
 
 #include <SPI.h>
