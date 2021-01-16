@@ -37,7 +37,7 @@
 #define SWITCH_PIN A3 // pin for switch that sets continual update mode
 #define SD_CS_PIN 4 // CS pin of SD card, 4 on SD MKR proto shield
 #define CUR_YEAR 2021 // for GPS first fix error checking
-// #define DEBUG_PRINT
+#define DEBUG_PRINT
 
 HM3301 dustSensor;
 BMP280 TPSensor;
@@ -56,6 +56,9 @@ int localDay;
 int localHour;
 int localMinute;
 int localSecond;
+double latitude;
+double longitude;
+double altitude;
 
 time_t prevTimeStamp;
 
@@ -239,9 +242,6 @@ void updateSampleSD()
 
   if(gpsFlag)
   {
-    // wake up GPS module
-    wakeGps();
-
     if(firstGpsRead)
     {
       display("Reading GPS...", 16, true, false);
@@ -252,6 +252,9 @@ void updateSampleSD()
       display("Reading GPS...", 20, true, true);
     }
 
+    // wake up GPS module
+    wakeGps();
+
     // Read GPS data until it's valid
     do
     {
@@ -260,6 +263,18 @@ void updateSampleSD()
     
     // set time for now()
     setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
+
+    latitude = gps.location.lat();
+    longitude = gps.location.lng();
+    altitude = gps.altitude.meters();
+
+    // This is a band-aid for a bug where the the GPS sleep command would sometimes fail
+    // TODO: figure out a way to verify if the GPS is asleep
+    for (int i = 0; i < 10; i++)
+    {
+      sleepGps();
+      delay(10);
+    }
 
     // store UTC time
     utcTime = now();
@@ -329,11 +344,11 @@ void updateSampleSD()
       Serial.print("+00:00");
 
       Serial.print(',');
-      Serial.print(gps.location.lat(), 5);
+      Serial.print(latitude, 5);
       Serial.print(',');
-      Serial.print(gps.location.lng(), 5);
+      Serial.print(longitude, 5);
       Serial.print(',');
-      Serial.print(gps.altitude.meters(), 2);
+      Serial.print(altitude, 2);
 
       Serial.print(',');
       Serial.print(temp.integral); Serial.print('.'); Serial.print(temp.fractional);
@@ -391,11 +406,11 @@ void updateSampleSD()
     dataFile.print("+00:00");
 
     dataFile.print(',');
-    dataFile.print(gps.location.lat(), 5);
+    dataFile.print(latitude, 5);
     dataFile.print(',');
-    dataFile.print(gps.location.lng(), 5);
+    dataFile.print(longitude, 5);
     dataFile.print(',');
-    dataFile.print(gps.altitude.meters(), 2);
+    dataFile.print(altitude, 2);
 
     dataFile.print(',');
     dataFile.print(temp.integral); dataFile.print('.'); dataFile.print(temp.fractional);
@@ -496,7 +511,6 @@ void updateSampleSD()
   // Put GPS module to sleep
   if(gpsFlag)
   {
-    sleepGps();
     gpsFlag = false;
   }
 
@@ -669,13 +683,13 @@ void readGps()
 // sleep the GPS module
 void sleepGps()
 {
-  sendGpsCommand("105,8");
+  sendGpsCommand("051,1");
 }
 
 // wake up the GPS module
 void wakeGps()
 {
-  sendGpsCommand("105,0");
+  sendGpsCommand("051,0");
 }
 
 // send GPS command
@@ -690,6 +704,15 @@ void sendGpsCommand(const char* cmd)
   Serial1.write('*');
   Serial1.print(checksum, HEX);
   Serial1.write("\r\n");
+
+#ifdef DEBUG_PRINT
+  Serial.print("Command sent to GPS: ");
+  Serial.write('$');
+  Serial.write(finalCmd);
+  Serial.write('*');
+  Serial.print(checksum, HEX);
+  Serial.write("\r\n");
+#endif
 }
 
 // create a checksum for GPS command
