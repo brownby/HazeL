@@ -144,25 +144,6 @@ void setup() {
     dataFile = SD.open(dataFileName, FILE_WRITE);
     if(dataFile)
     {
-      // dataFile.print("Timestamp,");
-      // dataFile.print("Particle concentration (PM1.0 standard) (ug/m^3),");
-      // dataFile.print("Particle concentration (PM2.5 standard) (ug/m^3),");
-      // dataFile.print("Particle concentration (PM10.0 standard) (ug/m^3),");
-      // dataFile.print("Particle concentration (PM1.0 atmospheric) (ug/m^3),");
-      // dataFile.print("Particle concentration (PM2.5 atmospheric) (ug/m^3),");
-      // dataFile.print("Particle concentration (PM10.0 atmospheric) (ug/m^3),");
-      // dataFile.print("Particle concentration (>=0.3um) (pcs/L),");
-      // dataFile.print("Particle concentration (>=0.5um) (pcs/L),");
-      // dataFile.print("Particle concentration (>=1.0um) (pcs/L),");
-      // dataFile.print("Particle concentration (>=2.5um) (pcs/L),");
-      // dataFile.print("Particle concentration (>=5.0um) (pcs/L),");
-      // dataFile.print("Particle concentration (>=10.0um) (pcs/L),");
-      // dataFile.print("Temperature (\xb0\x43)");
-      // dataFile.print("Pressure (Pa)");
-      // dataFile.print("Latitude,");
-      // dataFile.print("Longitude,");
-      // dataFile.print("Elevation,");
-      // dataFile.println("CurLine,");
       dataFile.println('x'); // mark first line with an x, will use aline with an 'x' to indicate the location of the last line read
       dataFile.close();  
     }
@@ -543,89 +524,117 @@ void uploadSerial()
     delay(5000);
   }
   
-
-  bool xFound = false; // find the x, indicating last line read
-  uint32_t xPosition;  // store position of x to delete it later
-  int i = 0;
-  dataFile = SD.open(dataFileName, FILE_READ);
-  if(dataFile)
-  {
-    while(dataFile.available())
-    {
-      char c = dataFile.read();
-      
-      // first loop through to find the x
-      if(!xFound)
-      {
-        if(c == 'x')
-        {
-          xFound = true;
-          xPosition = dataFile.position();
-          dataFile.read(); // read '\r'
-          dataFile.read(); // read '\n'
-        }
-        continue; // read next character, don't do any of the rest of this loop
-      }
-      else
-      {
-        if(c == '\n')
-        {
-          i = 0; // reset index
-          Serial.println(sd_buf); // print line to serial port
-          memset(sd_buf, 0, sizeof(sd_buf)); // reset buffer holding line to 0
-        }
-        else
-        {
-          sd_buf[i++] = c; // add character to buffer holding current line
-        }
-      }
-    }
-    dataFile.close();
-  }
-  else
+  // if switch is high (to the left), upload entire file
+  if(digitalRead(SWITCH_PIN))
   {
 #ifdef DEBUG_PRINT
-    Serial.println("Couldn't open file");
+    Serial.println("Mode 2, upload entire file");
 #endif
-  }
-  // Now remove x, add it to the end of the file  
-  // Open temporary file and data.txt
-  File tmpFile = SD.open("tmp.txt", FILE_WRITE);
-  dataFile = SD.open(dataFileName, FILE_READ);
-  if(dataFile && tmpFile)
-  {
-    // Move data, minus the x and following CR and NL, into tmp.txt
+    int i = 0;
+    dataFile = SD.open(dataFileName, FILE_READ);
     while(dataFile.available())
     {
       char c = dataFile.read();
       if (c == 'x')
       {
-        // ignore x and following '\r' and '\n'
-        dataFile.read();
-        dataFile.read();
+        dataFile.read(); // read '\r'
+        dataFile.read(); // read '\n'
         continue;
       }
-      tmpFile.write(c);
+      else
+      {
+        Serial.write(c);
+      }
     }
-
-    // Rename tmp.txt to data.txt, delete data.txt
-    dataFile.rename("datatmp.txt");
-    tmpFile.rename(dataFileName);
-    dataFile.close();
-    tmpFile.close();
-    SD.remove("datatmp.txt");
-    
-    tmpFile = SD.open(dataFileName, O_RDWR);
-
-    tmpFile.seek(tmpFile.size()-1); // go to end of file
-    tmpFile.println('x'); // an 'x' line
-    tmpFile.close();
   }
-  else
+  else // if switch is low (to the right), only upload from the location in the file where last update ended
   {
 #ifdef DEBUG_PRINT
-    Serial.println("Couldn't open tmp and data files");
+    Serial.println("Mode 3, incremental upload");
 #endif
+    bool xFound = false; // find the x, indicating last line read
+    uint32_t xPosition;  // store position of x to delete it later
+    int i = 0;
+    dataFile = SD.open(dataFileName, FILE_READ);
+    if(dataFile)
+    {
+      while(dataFile.available())
+      {
+        char c = dataFile.read();
+        
+        // first loop through to find the x
+        if(!xFound)
+        {
+          if(c == 'x')
+          {
+            xFound = true;
+            xPosition = dataFile.position();
+            dataFile.read(); // read '\r'
+            dataFile.read(); // read '\n'
+          }
+          continue; // read next character, don't do any of the rest of this loop
+        }
+        else
+        {
+          if(c == '\n')
+          {
+            i = 0; // reset index
+            Serial.println(sd_buf); // print line to serial port
+            memset(sd_buf, 0, sizeof(sd_buf)); // reset buffer holding line to 0
+          }
+          else
+          {
+            sd_buf[i++] = c; // add character to buffer holding current line
+          }
+        }
+      }
+      dataFile.close();
+    }
+    else
+    {
+#ifdef DEBUG_PRINT
+      Serial.println("Couldn't open file");
+#endif
+    }
+    // Now remove x, add it to the end of the file  
+    // Open temporary file and data.txt
+    File tmpFile = SD.open("tmp.txt", FILE_WRITE);
+    dataFile = SD.open(dataFileName, FILE_READ);
+    if(dataFile && tmpFile)
+    {
+      // Move data, minus the x and following CR and NL, into tmp.txt
+      while(dataFile.available())
+      {
+        char c = dataFile.read();
+        if (c == 'x')
+        {
+          // ignore x and following '\r' and '\n'
+          dataFile.read();
+          dataFile.read();
+          continue;
+        }
+        tmpFile.write(c);
+      }
+
+      // Rename tmp.txt to data.txt, delete data.txt
+      dataFile.rename("datatmp.txt");
+      tmpFile.rename(dataFileName);
+      dataFile.close();
+      tmpFile.close();
+      SD.remove("datatmp.txt");
+      
+      tmpFile = SD.open(dataFileName, O_RDWR);
+
+      tmpFile.seek(tmpFile.size()-1); // go to end of file
+      tmpFile.println('x'); // an 'x' line
+      tmpFile.close();
+    }
+    else
+    {
+#ifdef DEBUG_PRINT
+      Serial.println("Couldn't open tmp and data files");
+#endif
+    }
   }
   buttonISREn = true;
 }
