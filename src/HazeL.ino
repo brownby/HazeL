@@ -532,22 +532,22 @@ void uploadSerial()
 {
   buttonISREn = false; // disable button ISR
   // First check is USB is connected
-  if(!Serial)
-  {
-    display("USB not connected", 20, true, true);
-    delay(5000);
-    buttonISREn = true;
-    return;
-  }
-  else
-  {
-    display("Uploading data", 16, true, false);
-    display("via serial port", 24, false, true);
-    #ifdef DEBUG_PRINT
-    Serial.println("Serial upload initiated");
-    #endif
-    delay(5000);
-  }
+  // if(!Serial)
+  // {
+  //   display("USB not connected", 20, true, true);
+  //   delay(5000);
+  //   buttonISREn = true;
+  //   return;
+  // }
+  // else
+  // {
+  display("Uploading data", 16, true, false);
+  display("via serial port", 24, false, true);
+  #ifdef DEBUG_PRINT
+  Serial.println("Serial upload initiated");
+  #endif
+  delay(5000);
+  // }
   
   // if switch is high (to the left), upload entire file
   if(digitalRead(SWITCH_PIN))
