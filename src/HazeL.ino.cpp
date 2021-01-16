@@ -1,43 +1,30 @@
-/*
- * HazeL
- * Benjamin Y. Brown
- * 
- * Creates a file called "data.csv" on the SD card with columns for time stamp, PM concentrations, raw particle concentrations, and latitude and longitude
- *
- * Device will bulk update to ThingSpeak when button is pressed (may take a few minutes depending on amount of data)
- * For automatic ThingSpeak updates every 30 seconds, pull SWITCH_PIN low
- * 
- * Before uploading, enter the information for your WiFi SSID and password, 
- * as well as your ThingSpeak channel ID and write API key in "secrets.h"
- * 
- * GPS module may return stale time stamps depending on signal strength 
- * All data will be stored on SD card, regardless of staleness of time stamps
- * but only data points with unique time stamps will be updated to ThingSpeak
- */
-
+# 1 "C:\\Users\\beb539\\AppData\\Local\\Temp\\tmpxh7xg4k7"
+#include <Arduino.h>
+# 1 "C:/Users/beb539/Documents/Courses/S21/ES6/HazeL/src/HazeL.ino"
+# 18 "C:/Users/beb539/Documents/Courses/S21/ES6/HazeL/src/HazeL.ino"
 #include <SPI.h>
-// #include <SD.h>
+
 #include "SdFat.h"
 #include <Wire.h>
 #include "secrets.h"
 #include "HM3301.h"
 
-// Make sure you have these four libraries installed in Documents/Arduino/libraries
+
 #include <U8g2lib.h>
 #include <TinyGPS++.h>
 #include <TimeLib.h>
 #include <WiFi101.h>
 #include "Seeed_BMP280.h"
 
-#define SAMP_TIME 2500 // number of ms between sensor readings
-#define BLINK_TIME 30 // time in ms between LED blinks on successful write to SD
-#define GPS_TIME 10000 // time between GPS reads
-#define BLINK_CNT 3 // number of times to blink LED on successful write
-#define BUTTON_PIN A2 // pin for button that triggers ThingSpeak updates
-#define SWITCH_PIN A3 // pin for switch that sets continual update mode
-#define SD_CS_PIN 4 // CS pin of SD card, 4 on SD MKR proto shield
-#define CUR_YEAR 2021 // for GPS first fix error checking
-// #define DEBUG_PRINT
+#define SAMP_TIME 2500
+#define BLINK_TIME 30
+#define GPS_TIME 10000
+#define BLINK_CNT 3
+#define BUTTON_PIN A2
+#define SWITCH_PIN A3
+#define SD_CS_PIN 4
+#define CUR_YEAR 2021
+
 
 HM3301 dustSensor;
 BMP280 TPSensor;
@@ -72,22 +59,37 @@ volatile bool buttonISREn = false;
 bool ledFlag = false;
 uint8_t ledCount = 0;
 
-bool firstLineDone = false; // flag for first line (titles) having been read
+bool firstLineDone = false;
 bool newDataFile = false;
 uint32_t lastLinePosition = 0;
-char sd_buf[200]; // buffer to store single SD card line
-
+char sd_buf[200];
+void setup();
+void loop();
+void buttonISR();
+void updateSampleSD();
+void uploadSerial();
+void blinkLed();
+void readGps();
+void sleepGps();
+void wakeGps();
+void sendGpsCommand(const char* cmd);
+char createChecksum(char* cmd);
+void display(char* text, u8g2_uint_t height, bool clear, bool send);
+void updateThingSpeak();
+void connectWiFi();
+bool httpRequest(char* buffer);
+#line 80 "C:/Users/beb539/Documents/Courses/S21/ES6/HazeL/src/HazeL.ino"
 void setup() {
-  // initialize Serial port
+
   Serial.begin(115200);
 
-  // intialize comms with GPS object
+
   Serial1.begin(9600);
 
-  // Initialize I2C bus
+
   Wire.begin();
 
-  // Initialize comms with OLED display
+
   u8g2.begin();
 
   display("Initializing...", 20, true, true);
@@ -96,7 +98,7 @@ void setup() {
   Serial.println("Initializing...");
 #endif
 
-  // Set relevant pin modes
+
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(BUTTON_PIN, INPUT_PULLDOWN);
   pinMode(SWITCH_PIN, INPUT_PULLUP);
@@ -108,7 +110,7 @@ void setup() {
   display("Checking SD", 20, true, true);
   delay(2500);
 
-  // Initialize SD card communication
+
   if(!SD.begin(SD_CS_PIN))
   {
 #ifdef DEBUG_PRINT
@@ -128,8 +130,8 @@ void setup() {
   delay(2500);
 
   char displayBuffer[25];
-  // Create column titles in CSV if creating it
-  // If CSV already exists, data will just be appended at the end
+
+
   if(!SD.exists(dataFileName))
   {
     strcpy(displayBuffer, "Creating ");
@@ -140,12 +142,12 @@ void setup() {
     Serial.print("Creating ");
     Serial.println(dataFileName);
 #endif
-    // newDataFile = true;
+
     dataFile = SD.open(dataFileName, FILE_WRITE);
     if(dataFile)
     {
-      dataFile.println('x'); // mark first line with an x, will use aline with an 'x' to indicate the location of the last line read
-      dataFile.close();  
+      dataFile.println('x');
+      dataFile.close();
     }
     else
     {
@@ -158,7 +160,7 @@ void setup() {
 
   }
 
-  // Initialize dust sensor
+
   if(!dustSensor.begin())
   {
 #ifdef DEBUG_PRINT
@@ -171,21 +173,21 @@ void setup() {
 
   TPSensor.init();
 
-  // Attach ISR for flipping buttonFlag when button is pressed
+
   attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), buttonISR, RISING);
 
-  // put the GPS module to sleep
+
   sleepGps();
 
-  // enable button ISR
+
   buttonISREn = true;
 }
 
 void loop() {
-  // check number of milliseconds since Arduino was turned on
+
   curMillis = millis();
 
-  // Blink LED upon successful SD write
+
   if(ledFlag)
   {
     if(curMillis - prevLedMillis >= BLINK_TIME)
@@ -195,7 +197,7 @@ void loop() {
     }
   }
 
-  // Read sensor and update SD card every SAMP_TIME milliseconds
+
   if(curMillis - prevSampMillis >= SAMP_TIME)
   {
     prevSampMillis = curMillis;
@@ -207,7 +209,7 @@ void loop() {
     updateSampleSD();
   }
 
-  // Upload data.txt to serial monitor if buttonFlag has been set (inside buttonISR)
+
   if(buttonFlag)
   {
     buttonFlag = false;
@@ -217,7 +219,7 @@ void loop() {
 
 }
 
-// ISR for button being pressed
+
 void buttonISR()
 {
   if(buttonISREn == true)
@@ -227,7 +229,7 @@ void buttonISR()
   }
 }
 
-// update samples in SD card
+
 void updateSampleSD()
 {
   bool staleFlag = false;
@@ -239,7 +241,7 @@ void updateSampleSD()
 
   if(gpsFlag)
   {
-    // wake up GPS module
+
     wakeGps();
 
     if(firstGpsRead)
@@ -252,19 +254,19 @@ void updateSampleSD()
       display("Reading GPS...", 20, true, true);
     }
 
-    // Read GPS data until it's valid
+
     do
     {
       readGps();
     } while (!(gps.date.isValid() && gps.time.isValid() && gps.location.isValid() && gps.altitude.isValid() && gps.date.year() == CUR_YEAR));
-    
-    // set time for now()
+
+
     setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
 
-    // store UTC time
+
     utcTime = now();
 
-    // convert to local time
+
     localTime = utcTime;
     localYear = year(localTime);
     localMonth = month(localTime);
@@ -273,12 +275,12 @@ void updateSampleSD()
     localMinute = minute(localTime);
     localSecond = second(localTime);
 
-    // read temperature and pressure
+
     temp = TPSensor.getTemperature();
     press = TPSensor.getPressure();
   }
-  
-  // Read dust sensor
+
+
   while(!dustSensor.read())
   {
 #ifdef DEBUG_PRINT
@@ -299,14 +301,14 @@ void updateSampleSD()
   uint16_t count_5p0um = dustSensor.data.count_5p0um;
   uint16_t count_10p0um = dustSensor.data.count_10p0um;
 
-  // Display data to serial monitor and OLED display
-  // Store data on SD card
+
+
   dataFile = SD.open(dataFileName, FILE_WRITE);
   if(dataFile)
   {
-    // Display time stamp and data in the serial monitor
 
-    // Print out timestamp and temperature when gpsFlag is set
+
+
     if(gpsFlag)
     {
       Serial.print("# ");
@@ -340,7 +342,7 @@ void updateSampleSD()
       Serial.print(',');
       Serial.print(press.integral); Serial.print('.'); Serial.println(press.fractional);
     }
-    
+
     Serial.print(PM1p0_std);
     Serial.print(',');
     Serial.print(PM2p5_std);
@@ -365,9 +367,9 @@ void updateSampleSD()
     Serial.print(',');
     Serial.println(count_10p0um);
 
-    // Update data.txt with the same information
-    // char offsetString[5];
-    // itoa(abs(timeZone), offsetString, 10);
+
+
+
 
   if(gpsFlag)
   {
@@ -403,29 +405,29 @@ void updateSampleSD()
     dataFile.print(press.integral); dataFile.print('.'); dataFile.println(press.fractional);
   }
 
-    dataFile.print(PM1p0_std); // PM1.0 (standard)
+    dataFile.print(PM1p0_std);
     dataFile.print(",");
-    dataFile.print(PM2p5_std); // PM2.5 (standard)
+    dataFile.print(PM2p5_std);
     dataFile.print(",");
-    dataFile.print(PM10p0_std); // PM10.0 (standard)
+    dataFile.print(PM10p0_std);
     dataFile.print(",");
-    dataFile.print(PM1p0_atm); // PM1.0 (atmo)
+    dataFile.print(PM1p0_atm);
     dataFile.print(",");
-    dataFile.print(PM2p5_atm); // PM2.5 (atmo)
+    dataFile.print(PM2p5_atm);
     dataFile.print(",");
-    dataFile.print(PM10p0_atm); // PM10.0 (atmo)
+    dataFile.print(PM10p0_atm);
     dataFile.print(",");
-    dataFile.print(count_0p3um); // >0.3um 
+    dataFile.print(count_0p3um);
     dataFile.print(",");
-    dataFile.print(count_0p5um); // >0.5um
+    dataFile.print(count_0p5um);
     dataFile.print(",");
-    dataFile.print(count_1p0um); // >1.0um
+    dataFile.print(count_1p0um);
     dataFile.print(",");
-    dataFile.print(count_2p5um); // >2.5um
+    dataFile.print(count_2p5um);
     dataFile.print(",");
-    dataFile.print(count_5p0um); // >5.0um
+    dataFile.print(count_5p0um);
     dataFile.print(",");
-    dataFile.println(count_10p0um); // >10.0um
+    dataFile.println(count_10p0um);
     dataFile.close();
 
     char displayText[50];
@@ -493,7 +495,7 @@ void updateSampleSD()
     display("Couldn't open file", 20, true, true);
   }
 
-  // Put GPS module to sleep
+
   if(gpsFlag)
   {
     sleepGps();
@@ -502,11 +504,11 @@ void updateSampleSD()
 
 }
 
-// upload SD card data over serial port
+
 void uploadSerial()
 {
-  buttonISREn = false; // disable button ISR
-  // First check is USB is connected
+  buttonISREn = false;
+
   if(!Serial)
   {
     display("USB not connected", 20, true, true);
@@ -523,8 +525,8 @@ void uploadSerial()
 #endif
     delay(5000);
   }
-  
-  // if switch is high (to the left), upload entire file
+
+
   if(digitalRead(SWITCH_PIN))
   {
 #ifdef DEBUG_PRINT
@@ -537,8 +539,8 @@ void uploadSerial()
       char c = dataFile.read();
       if (c == 'x')
       {
-        dataFile.read(); // read '\r'
-        dataFile.read(); // read '\n'
+        dataFile.read();
+        dataFile.read();
         continue;
       }
       else
@@ -547,13 +549,13 @@ void uploadSerial()
       }
     }
   }
-  else // if switch is low (to the right), only upload from the location in the file where last update ended
+  else
   {
 #ifdef DEBUG_PRINT
     Serial.println("Mode 3, incremental upload");
 #endif
-    bool xFound = false; // find the x, indicating last line read
-    uint32_t xPosition;  // store position of x to delete it later
+    bool xFound = false;
+    uint32_t xPosition;
     int i = 0;
     dataFile = SD.open(dataFileName, FILE_READ);
     if(dataFile)
@@ -561,30 +563,30 @@ void uploadSerial()
       while(dataFile.available())
       {
         char c = dataFile.read();
-        
-        // first loop through to find the x
+
+
         if(!xFound)
         {
           if(c == 'x')
           {
             xFound = true;
             xPosition = dataFile.position();
-            dataFile.read(); // read '\r'
-            dataFile.read(); // read '\n'
+            dataFile.read();
+            dataFile.read();
           }
-          continue; // read next character, don't do any of the rest of this loop
+          continue;
         }
         else
         {
           if(c == '\n')
           {
-            i = 0; // reset index
-            Serial.println(sd_buf); // print line to serial port
-            memset(sd_buf, 0, sizeof(sd_buf)); // reset buffer holding line to 0
+            i = 0;
+            Serial.println(sd_buf);
+            memset(sd_buf, 0, sizeof(sd_buf));
           }
           else
           {
-            sd_buf[i++] = c; // add character to buffer holding current line
+            sd_buf[i++] = c;
           }
         }
       }
@@ -596,19 +598,19 @@ void uploadSerial()
       Serial.println("Couldn't open file");
 #endif
     }
-    // Now remove x, add it to the end of the file  
-    // Open temporary file and data.txt
+
+
     File tmpFile = SD.open("tmp.txt", FILE_WRITE);
     dataFile = SD.open(dataFileName, FILE_READ);
     if(dataFile && tmpFile)
     {
-      // Move data, minus the x and following CR and NL, into tmp.txt
+
       while(dataFile.available())
       {
         char c = dataFile.read();
         if (c == 'x')
         {
-          // ignore x and following '\r' and '\n'
+
           dataFile.read();
           dataFile.read();
           continue;
@@ -616,17 +618,17 @@ void uploadSerial()
         tmpFile.write(c);
       }
 
-      // Rename tmp.txt to data.txt, delete data.txt
+
       dataFile.rename("datatmp.txt");
       tmpFile.rename(dataFileName);
       dataFile.close();
       tmpFile.close();
       SD.remove("datatmp.txt");
-      
+
       tmpFile = SD.open(dataFileName, O_RDWR);
 
-      tmpFile.seek(tmpFile.size()-1); // go to end of file
-      tmpFile.println('x'); // an 'x' line
+      tmpFile.seek(tmpFile.size()-1);
+      tmpFile.println('x');
       tmpFile.close();
     }
     else
@@ -639,12 +641,12 @@ void uploadSerial()
   buttonISREn = true;
 }
 
-// blink LED
+
 void blinkLed()
 {
-  
+
   digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-  
+
   if(++ledCount >= BLINK_CNT*2)
   {
     ledFlag = false;
@@ -652,7 +654,7 @@ void blinkLed()
   }
 }
 
-// read GPS module and encode data
+
 void readGps()
 {
   while(Serial1.available() > 0)
@@ -666,23 +668,23 @@ void readGps()
   }
 }
 
-// sleep the GPS module
+
 void sleepGps()
 {
   sendGpsCommand("105,8");
 }
 
-// wake up the GPS module
+
 void wakeGps()
 {
   sendGpsCommand("105,0");
 }
 
-// send GPS command
+
 void sendGpsCommand(const char* cmd)
 {
   char cmdBase[] = "PGKC";
-  char* finalCmd = strcat(cmdBase, cmd); // data between the $ and * - on which checksum is based
+  char* finalCmd = strcat(cmdBase, cmd);
   char checksum = createChecksum(finalCmd);
 
   Serial1.write('$');
@@ -692,7 +694,7 @@ void sendGpsCommand(const char* cmd)
   Serial1.write("\r\n");
 }
 
-// create a checksum for GPS command
+
 char createChecksum(char* cmd)
 {
   char checksum = 0;
@@ -705,15 +707,15 @@ char createChecksum(char* cmd)
   return checksum;
 }
 
-// function for displaying characters to OLED 
+
 void display(char* text, u8g2_uint_t height, bool clear, bool send)
 {
   if(clear)
   {
     u8g2.clearBuffer();
   }
- 
-  // u8g2.setFont(u8g2_font_helvB08_tf); // TODO: look into other fonts
+
+
   u8g2.setFont(u8g2_font_synchronizer_nbp_tf);
   u8g2.drawStr(0, height, text);
   u8g2.sendBuffer();
@@ -724,29 +726,29 @@ void display(char* text, u8g2_uint_t height, bool clear, bool send)
   }
 }
 
-/*
- * Functions and variables below this point are used for updating to ThingSpeak, not used in this version
- */
+
+
+
 
 WiFiClient client;
 const char server[] = "api.thingspeak.com";
 
-char tspeak_buf[5000]; // buffer for storing multiple rows of data from the CSV for ThingSpeak bulk updates
-char status_buf[20]; // buffer for status text
-uint8_t colPositions[17] = {0}; // array to store indices of commas in sd_buf, indicating column delineations
-unsigned long prevFileSize = 0; // last recorded file size
-unsigned long bytesLeft = 0; // bytes left in file to update to ThingSpeak
+char tspeak_buf[5000];
+char status_buf[20];
+uint8_t colPositions[17] = {0};
+unsigned long prevFileSize = 0;
+unsigned long bytesLeft = 0;
 
-// updates to ThingSpeak in bulk updates of 5kB of data
+
 void updateThingSpeak()
 {
-  // Initialize tspeak_buf
+
   memset(tspeak_buf, 0, sizeof(tspeak_buf));
   strcpy(tspeak_buf, "write_api_key=");
   strcat(tspeak_buf, writeApiKey);
   strcat(tspeak_buf, "&time_format=absolute&updates=");
 
-  // Open file on SD card
+
   display("Updating to", 16, true, false);
   display("ThingSpeak...00%", 24, false, true);
   dataFile = SD.open(dataFileName, FILE_READ);
@@ -754,31 +756,31 @@ void updateThingSpeak()
   {
     uint32_t charCount = strlen(tspeak_buf);
     uint32 rawByteCount = 0;
-    uint32_t colCount = 0; 
+    uint32_t colCount = 0;
     uint32_t i = 0;
-    uint32_t linePosition = 0; // location in file of most recent line
+    uint32_t linePosition = 0;
     int percentComplete = 0;
 
     dataFile.seek(lastLinePosition);
     bytesLeft = dataFile.size() - prevFileSize;
     prevFileSize = dataFile.size();
-    
+
     while(dataFile.available())
     {
       char c = dataFile.read();
       rawByteCount++;
 
-      // Every time you fill up tspeak_buf, send an update to thing speak
+
       if((charCount >= sizeof(tspeak_buf) - 200) && (c != '\n'))
       {
         Serial.println("Buffer full!");
         Serial.println(charCount);
-        tspeak_buf[strlen(tspeak_buf) - 1] = 0; // remove last pipe character
+        tspeak_buf[strlen(tspeak_buf) - 1] = 0;
 
-        while(!httpRequest(tspeak_buf)); // keep trying until ThingSpeak/WiFi connection works
+        while(!httpRequest(tspeak_buf));
         percentComplete = (rawByteCount*100)/bytesLeft;
 
-        // reset byte counter and thingspeak buffer
+
         memset(tspeak_buf, 0, sizeof(tspeak_buf));
         strcpy(tspeak_buf, "write_api_key=");
         strcat(tspeak_buf, writeApiKey);
@@ -801,33 +803,33 @@ void updateThingSpeak()
 
         Serial.print("Update "); Serial.print(percentComplete); Serial.println("% done");
 
-        // clear SD line buffer and move back to start of latest line
+
         memset(sd_buf, 0, sizeof(sd_buf));
         dataFile.seek(linePosition);
 
         display("Updating to", 16, true, false);
         display(tspeakDisplay, 24, false, true);
-        delay(15000); // can only update to Thingspeak every 15s
+        delay(15000);
 
         Serial.println("Back to updating");
       }
       else if(c == '\n')
       {
-        // on a new line, process data on line
+
         i = 0;
         colCount = 0;
 
-        // store position in file of the start of next line
+
         linePosition = dataFile.position();
 
-        // One time if statement to avoid reading the first row, which has titles of columns
+
         if(!firstLineDone)
         {
           firstLineDone = true;
           continue;
         }
 
-        // only update line if GPS data isn't stale
+
         memset(status_buf, 0, sizeof(status_buf));
         int j = 0;
         for(int k = colPositions[16]; k < strlen(sd_buf); k++)
@@ -835,39 +837,39 @@ void updateThingSpeak()
           status_buf[j++] = sd_buf[k];
         }
 
-        // if GPS time stamp isn't stale, include in tspeak_buf (data to be sent to thingspeak)
+
         if(status_buf[0] == 'g')
         {
           Serial.println("Updating thingspeak buffer");
 
-          // Remove columns for standard PM data and 0.5um particles
-          uint8_t pmStIndex = colPositions[1]; // index of first standard PM column
-          uint8_t pmAtIndex = colPositions[4]; // index of first atmo PM column
-          uint8_t zerop5umIndex = colPositions[8]; // index of 0.5um particles
-          uint8_t oneumIndex = colPositions[9]; // index of 1um particles
-          uint8_t pmColsDel = pmAtIndex - pmStIndex; // PM columns to delete
-          uint8_t cntsColDel = oneumIndex - zerop5umIndex; // Particle count columns to be deleted
 
-          // move indices since we'll be deleting characters
+          uint8_t pmStIndex = colPositions[1];
+          uint8_t pmAtIndex = colPositions[4];
+          uint8_t zerop5umIndex = colPositions[8];
+          uint8_t oneumIndex = colPositions[9];
+          uint8_t pmColsDel = pmAtIndex - pmStIndex;
+          uint8_t cntsColDel = oneumIndex - zerop5umIndex;
+
+
           zerop5umIndex -= pmColsDel;
           oneumIndex -= pmColsDel;
-          
+
           for(int k = pmStIndex; k < sizeof(sd_buf) - pmColsDel; k++)
           {
-            sd_buf[k] = sd_buf[k + pmColsDel]; // move all data back by pmColsDel
+            sd_buf[k] = sd_buf[k + pmColsDel];
           }
           for(int k = zerop5umIndex; k < sizeof(sd_buf) - cntsColDel; k++)
           {
-            sd_buf[k] = sd_buf[k + cntsColDel]; // do the same to get rid of the 0.5um column
+            sd_buf[k] = sd_buf[k + cntsColDel];
           }
-          
-          // remove newline from the end of the line
+
+
           sd_buf[strlen(sd_buf) - 1] = 0;
           Serial.println(sd_buf);
 
-          // SD data is already formatted for ThingSpeak updates, just concatenate each line with pipe character in between
+
           strcat(tspeak_buf, sd_buf);
-          strcat(tspeak_buf, "|"); // add pipe character between updates
+          strcat(tspeak_buf, "|");
           charCount += strlen(sd_buf)+1;
         }
 
@@ -875,25 +877,25 @@ void updateThingSpeak()
       }
       else if(firstLineDone)
       {
-        // fill up buffer with characters read
+
         if(c == ',')
         {
-          colPositions[++colCount] = i+1; // store start of data in column, so character following a comma
+          colPositions[++colCount] = i+1;
         }
         sd_buf[i++] = c;
       }
     }
 
-    // close file
+
     dataFile.close();
 
-    // store the position of the latest line that was read
+
     lastLinePosition = linePosition;
 
-    // update with the latest data
-    tspeak_buf[strlen(tspeak_buf) - 1] = 0; // remove last pipe character
-    
-    // Only update to ThingSpeak if there's data leftover
+
+    tspeak_buf[strlen(tspeak_buf) - 1] = 0;
+
+
     if(strlen(tspeak_buf) >= 60)
     {
       while(!httpRequest(tspeak_buf));
@@ -911,20 +913,20 @@ void updateThingSpeak()
   }
 }
 
-// connect to WiFi
+
 void connectWiFi()
 {
-  // Initialize WiFi 
+
   unsigned long startTime = millis();
   display("Connecting to WiFi", 20, true, true);
 
   WiFi.begin(ssid, password);
-  
+
   while(WiFi.status() != WL_CONNECTED)
   {
     delay(500);
     Serial.print(".");
-    if(millis() - startTime > 20000) // time out after a 20s, then retry
+    if(millis() - startTime > 20000)
     {
       Serial.println("\nTime out, reconnecting");
       WiFi.end();
@@ -938,12 +940,12 @@ void connectWiFi()
   display("WiFi connected", 20, true, true);
 }
 
-// form HTTP request for bulk updates
+
 bool httpRequest(char* buffer)
 {
   bool success = false;
 
-  // Connect to WiFi
+
   connectWiFi();
 
   client.stop();
