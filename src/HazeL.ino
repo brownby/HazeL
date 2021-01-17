@@ -31,7 +31,7 @@
 #define SWITCH_PIN A3 // pin for switch that sets continual update mode
 #define SD_CS_PIN 4 // CS pin of SD card, 4 on SD MKR proto shield
 #define CUR_YEAR 2021 // for GPS first fix error checking
-// #define DEBUG_PRINT
+#define DEBUG_PRINT
 
 HM3301 dustSensor;
 BMP280 TPSensor;
@@ -653,6 +653,11 @@ void uploadSerial()
     dataFile.seek(0);
     // Open temporary file
     File tmpFile = SD.open("tmp.txt", FILE_WRITE);
+    uint8_t buffer[512] = {0}; // buffer to read/write data 512 bytes at a time
+    uint16_t writeLen = sizeof(buffer);
+    #ifdef DEBUG_PRINT
+    unsigned long preSD = millis();
+    #endif
     if(dataFile && tmpFile)
     {
       #ifdef DEBUG_PRINT
@@ -661,18 +666,56 @@ void uploadSerial()
       // Move data, minus the x and following CR and NL, into tmp.txt
       while(dataFile.available())
       {
-        char c = dataFile.read();
-        if (c == 'x')
+        // char c = dataFile.read();
+        #ifdef DEBUG_PRINT
+        Serial.println(dataFile.available());
+        #endif
+        if (dataFile.available() > sizeof(buffer))
         {
-          // ignore x and following '\r' and '\n'
-          dataFile.read();
-          dataFile.read();
-          continue;
+          dataFile.read(buffer, sizeof(buffer));
         }
-        tmpFile.write(c);
+        else
+        {
+          dataFile.read(buffer, dataFile.available());
+          writeLen = dataFile.available();
+        }
+        
+        // look for and remove x if there
+        for (int i = 0; i < writeLen; i++)
+        {
+          if (buffer[i] == 'x')
+          {
+            #ifdef DEBUG_PRINT
+            Serial.println("Found x");
+            Serial.println("buffer before removing x: ");
+            Serial.println((char*)buffer);
+            #endif
+            // move all data back by 3 bytes
+            writeLen -= 3;
+            for (int j = i; j < writeLen; j++)
+            {
+              buffer[j] = buffer[j+3];
+            }
+            buffer[writeLen] = 0;
+            buffer[writeLen+1] = 0;
+            buffer[writeLen+2] = 0;
+
+            #ifdef DEBUG_PRINT
+            Serial.println("buffer after removing x: ");
+            Serial.println((char*)buffer);
+            #endif
+          }
+        }
+
+        tmpFile.print((char*)buffer);
+        memset(buffer, 0, sizeof(buffer));
+        digitalWrite(LED_BUILTIN, HIGH);
       }
 
+      digitalWrite(LED_BUILTIN, LOW);
       #ifdef DEBUG_PRINT
+      unsigned long postSD = millis();
+      Serial.print("Moving contents of data.txt took: "); Serial.print(postSD - preSD); Serial.println(" ms");
       Serial.println("Renaming and deleting old data file");
       #endif
       // Rename tmp.txt to data.txt, delete old data.txt (after renaming to datatmp.txt)
