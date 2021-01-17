@@ -12,7 +12,6 @@
  */
 
 #include <SPI.h>
-// #include <SD.h>
 #include "SdFat.h"
 #include <Wire.h>
 #include "secrets.h"
@@ -22,7 +21,6 @@
 #include <U8g2lib.h>
 #include <TinyGPS++.h>
 #include <TimeLib.h>
-#include <WiFi101.h>
 #include "Seeed_BMP280.h"
 
 #define SAMP_TIME 2500 // number of ms between sensor readings
