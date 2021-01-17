@@ -31,7 +31,7 @@
 #define SWITCH_PIN A3 // pin for switch that sets continual update mode
 #define SD_CS_PIN 4 // CS pin of SD card, 4 on SD MKR proto shield
 #define CUR_YEAR 2021 // for GPS first fix error checking
-#define DEBUG_PRINT
+// #define DEBUG_PRINT
 
 HM3301 dustSensor;
 BMP280 TPSensor;
