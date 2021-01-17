@@ -81,7 +81,7 @@ void setup() {
   // initialize Serial port
   Serial.begin(115200);
 
-  // intialize comms with GPS object
+  // intialize comms with GPS module
   Serial1.begin(9600);
 
   // Initialize I2C bus
@@ -128,8 +128,7 @@ void setup() {
   delay(2500);
 
   char displayBuffer[25];
-  // Create column titles in CSV if creating it
-  // If CSV already exists, data will just be appended at the end
+  // Create data.txt file if does not exist
   if(!SD.exists(dataFileName))
   {
     strcpy(displayBuffer, "Creating ");
@@ -170,12 +169,6 @@ void setup() {
   }
 
   TPSensor.init();
-
-  // Put GPS to sleep
-  // if (gpsAwake)
-  // {
-  //   toggleGps();
-  // }
 
   // Attach ISR for flipping buttonFlag when button is pressed
   attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), buttonISR, RISING);
@@ -233,7 +226,7 @@ void buttonISR()
 // update samples in SD card
 void updateSampleSD()
 {
-  bool staleFlag = false;
+  bool firstFlag = false; // local version of the first GPS read flag used for timeout logic
   time_t localTime;
   time_t utcTime;
 
@@ -246,7 +239,7 @@ void updateSampleSD()
     {
       display("Reading GPS...", 16, true, false);
       display("(GPS warming up)", 24, false, true);
-      firstGpsRead = false;
+      firstFlag = true;
     }
     else{
       display("Reading GPS...", 20, true, true);
@@ -257,23 +250,26 @@ void updateSampleSD()
     {
       toggleGps();
     }
-    unsigned long gpsCurMillis;
-    unsigned long gpsPrevMillis = millis();
+    unsigned long gpsReadCurMillis;
+    unsigned long gpsReadPrevMillis = millis();
 
     // Read GPS data until it's valid
     do
     {
-      // gpsCurMillis = millis();
-      // if (gpsCurMillis - gpsPrevMillis >= 15000)
-      // {
-      //   // Wake command may not have worked, toggle GPS asleep and awake
-      //   gpsPrevMillis = gpsCurMillis;
-      //   #ifdef DEBUG_PRINT
-      //   Serial.println("Re-sending GPS wake command");
-      //   #endif
-      //   wakeGps();
-      //   delay(200);
-      // }
+      gpsReadCurMillis = millis();
+      if (!firstFlag)
+      {
+        if (gpsReadCurMillis - gpsReadPrevMillis >= 15000)
+        {
+          // Wake command may not have worked, toggle GPS again
+          gpsReadPrevMillis = gpsReadCurMillis;
+          toggleGps();
+          gpsAwake = true;
+          #ifdef DEBUG_PRINT
+          Serial.println("Re-sending GPS wake command");
+          #endif
+        }
+      }
 
       readGps();
 
@@ -299,13 +295,7 @@ void updateSampleSD()
     longitude = gps.location.lng();
     altitude = gps.altitude.meters();
 
-    // This is a band-aid for a bug where the the GPS sleep command would sometimes fail
-    // TODO: figure out a way to verify if the GPS is asleep
-    // for (int i = 0; i < 10; i++)
-    // {
-    //   sleepGps();
-    //   delay(10);
-    // }
+    // put GPS to sleep
     if (gpsAwake)
     {
       toggleGps();
@@ -323,6 +313,8 @@ void updateSampleSD()
     // read temperature and pressure
     temp = TPSensor.getTemperature();
     press = TPSensor.getPressure();
+
+    if (firstGpsRead) {firstGpsRead = false;}
   }
   
   // Read dust sensor
@@ -411,10 +403,6 @@ void updateSampleSD()
     Serial.print(count_5p0um);
     Serial.print(',');
     Serial.println(count_10p0um);
-
-    // Update data.txt with the same information
-    // char offsetString[5];
-    // itoa(abs(timeZone), offsetString, 10);
 
   if(gpsFlag)
   {
@@ -540,7 +528,6 @@ void updateSampleSD()
     display("Couldn't open file", 20, true, true);
   }
 
-  // Put GPS module to sleep
   if(gpsFlag)
   {
     gpsFlag = false;
@@ -552,23 +539,12 @@ void updateSampleSD()
 void uploadSerial()
 {
   buttonISREn = false; // disable button ISR
-  // First check is USB is connected
-  // if(!Serial)
-  // {
-  //   display("USB not connected", 20, true, true);
-  //   delay(5000);
-  //   buttonISREn = true;
-  //   return;
-  // }
-  // else
-  // {
   display("Uploading data", 16, true, false);
   display("via serial port", 24, false, true);
   #ifdef DEBUG_PRINT
   Serial.println("Serial upload initiated");
   #endif
-  delay(5000);
-  // }
+  delay(2500);
   
   // if switch is high (to the left), upload entire file
   if(digitalRead(SWITCH_PIN))
@@ -581,6 +557,7 @@ void uploadSerial()
     while(dataFile.available())
     {
       char c = dataFile.read();
+      // skip the 'x' line
       if (c == 'x')
       {
         dataFile.read(); // read '\r'
@@ -668,7 +645,7 @@ void uploadSerial()
       #ifdef DEBUG_PRINT
       Serial.println("Renaming and deleting old data file");
       #endif
-      // Rename tmp.txt to data.txt, delete data.txt
+      // Rename tmp.txt to data.txt, delete old data.txt (after renaming to datatmp.txt)
       if (dataFile.rename("datatmp.txt"))
       {
         #ifdef DEBUG_PRINT
@@ -690,7 +667,6 @@ void uploadSerial()
       #ifdef DEBUG_PRINT
       Serial.println("Moving x to end of new data file");
       #endif
-      // tmpFile.seek(tmpFile.size()-1); // go to end of file
       tmpFile.println('x'); // an 'x' line
       tmpFile.close();
     }
@@ -735,7 +711,7 @@ void readGps()
 void toggleGps()
 {
   sendGpsCommand("051,0");
-  delay(200);
+  delay(100);
   gpsAwake = !gpsAwake;
   #ifdef DEBUG_PRINT
   if (gpsAwake)
@@ -807,6 +783,8 @@ void display(char* text, u8g2_uint_t height, bool clear, bool send)
 /*
  * Functions and variables below this point are used for updating to ThingSpeak, not used in this version
  */
+
+/*
 
 WiFiClient client;
 const char server[] = "api.thingspeak.com";
@@ -1099,3 +1077,5 @@ bool httpRequest(char* buffer)
 
     return success;
 }
+
+*/
