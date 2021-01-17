@@ -55,7 +55,7 @@ double latitude;
 double longitude;
 double altitude;
 
-time_t prevTimeStamp;
+time_t prevTimeStamp = 0;
 
 U8G2_SSD1306_128X64_ALT0_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 
@@ -225,6 +225,7 @@ void buttonISR()
 void updateSampleSD()
 {
   bool firstFlag = false; // local version of the first GPS read flag used for timeout logic
+  bool timeoutFlag = false;
   time_t localTime;
   time_t utcTime;
 
@@ -243,33 +244,58 @@ void updateSampleSD()
       display("Reading GPS...", 20, true, true);
     }
 
-    // wake up GPS module
+    // // wake up GPS module
     if (!gpsAwake)
     {
       toggleGps();
     }
     unsigned long gpsReadCurMillis;
     unsigned long gpsReadPrevMillis = millis();
+    #ifdef DEBUG_PRINT
+    unsigned long preRead = millis();
+    #endif
 
     // Read GPS data until it's valid
-    do
+    while (true)
     {
-      gpsReadCurMillis = millis();
-      if (!firstFlag)
-      {
-        if (gpsReadCurMillis - gpsReadPrevMillis >= 15000)
-        {
-          // Wake command may not have worked, toggle GPS again
-          gpsReadPrevMillis = gpsReadCurMillis;
-          toggleGps();
-          gpsAwake = true;
-          #ifdef DEBUG_PRINT
-          Serial.println("Re-sending GPS wake command");
-          #endif
-        }
-      }
+      // Still deciding if I want to include timeout or not
+      // gpsReadCurMillis = millis();
+      // if (!firstFlag)
+      // {
+      //   if (gpsReadCurMillis - gpsReadPrevMillis >= 30000)
+      //   {
+      //     // Wake command may not have worked, toggle GPS again
+      //     gpsReadPrevMillis = gpsReadCurMillis;
+      //     toggleGps();
+      //     gpsAwake = true;
+      //     #ifdef DEBUG_PRINT
+      //     Serial.println("Re-sending GPS wake command");
+      //     #endif
+      //   }
+      // }
 
       readGps();
+
+      // set time for now()
+      setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
+
+      if (gps.date.isValid() && gps.time.isValid() && gps.location.isValid() && gps.altitude.isValid() && gps.date.year() == CUR_YEAR)
+      {
+        #ifdef DEBUG_PRINT
+        Serial.println("GPS data valid");
+        #endif
+        if (now() > prevTimeStamp)
+        {
+          prevTimeStamp = now();
+          break;
+        }
+        #ifdef DEBUG_PRINT
+        else
+        {
+          Serial.println("Stale timestamp, continuing GPS read");
+        }
+        #endif
+      }
 
       // make GPS reads interruptible by the button being pressed
       if (buttonFlag)
@@ -281,10 +307,12 @@ void updateSampleSD()
         }
         return;
       }
-    } while (!(gps.date.isValid() && gps.time.isValid() && gps.location.isValid() && gps.altitude.isValid() && gps.date.year() == CUR_YEAR));
+    }
     
-    // set time for now()
-    setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
+    #ifdef DEBUG_PRINT
+    unsigned long postRead = millis();
+    Serial.print("GPS read took: "); Serial.print(postRead - preRead); Serial.println(" ms");
+    #endif
 
     // store UTC time
     utcTime = now();
@@ -297,6 +325,10 @@ void updateSampleSD()
     if (gpsAwake)
     {
       toggleGps();
+      if (firstFlag || timeoutFlag)
+      {
+        delay(500); // add extra delay after first read or timeout to make sure sleep command is properly interpreted before next read
+      }
     }
 
     // convert to local time
