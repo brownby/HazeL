@@ -250,7 +250,7 @@ void updateSampleSD()
       toggleGps();
     }
     unsigned long gpsReadCurMillis;
-    unsigned long gpsReadPrevMillis = millis();
+    unsigned long gpsReadStartMillis = millis();
     #ifdef DEBUG_PRINT
     unsigned long preRead = millis();
     #endif
@@ -259,7 +259,7 @@ void updateSampleSD()
     while (true)
     {
       // Still deciding if I want to include timeout or not
-      // gpsReadCurMillis = millis();
+      gpsReadCurMillis = millis();
       // if (!firstFlag)
       // {
       //   if (gpsReadCurMillis - gpsReadPrevMillis >= 30000)
@@ -284,17 +284,31 @@ void updateSampleSD()
         #ifdef DEBUG_PRINT
         Serial.println("GPS data valid");
         #endif
-        if (now() > prevTimeStamp)
+        // if GPS read takes longer than 5 seconds, just return stale data (don't timeout on first read)
+        if ((!firstFlag) && (gpsReadCurMillis - gpsReadStartMillis >= 5000))
         {
           prevTimeStamp = now();
+          timeoutFlag = true;
+          #ifdef DEBUG_PRINT 
+          Serial.println("GPS timeout, GPS data stale");
+          #endif
           break;
         }
-        #ifdef DEBUG_PRINT
         else
         {
-          Serial.println("Stale timestamp, continuing GPS read");
+          if (now() > prevTimeStamp)
+          {
+            prevTimeStamp = now();
+            break;
+          }
+          #ifdef DEBUG_PRINT
+          else
+          {
+            Serial.println("Stale timestamp, continuing GPS read");
+          }
+          #endif
         }
-        #endif
+      
       }
 
       // make GPS reads interruptible by the button being pressed
