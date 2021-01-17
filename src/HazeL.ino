@@ -31,7 +31,7 @@
 #define SWITCH_PIN A3 // pin for switch that sets continual update mode
 #define SD_CS_PIN 4 // CS pin of SD card, 4 on SD MKR proto shield
 #define CUR_YEAR 2021 // for GPS first fix error checking
-#define DEBUG_PRINT
+// #define DEBUG_PRINT
 
 HM3301 dustSensor;
 BMP280 TPSensor;
@@ -666,10 +666,6 @@ void uploadSerial()
       // Move data, minus the x and following CR and NL, into tmp.txt
       while(dataFile.available())
       {
-        // char c = dataFile.read();
-        #ifdef DEBUG_PRINT
-        Serial.println(dataFile.available());
-        #endif
         if (dataFile.available() > sizeof(buffer))
         {
           dataFile.read(buffer, sizeof(buffer));
@@ -685,11 +681,6 @@ void uploadSerial()
         {
           if (buffer[i] == 'x')
           {
-            #ifdef DEBUG_PRINT
-            Serial.println("Found x");
-            Serial.println("buffer before removing x: ");
-            Serial.println((char*)buffer);
-            #endif
             // move all data back by 3 bytes
             writeLen -= 3;
             for (int j = i; j < writeLen; j++)
@@ -699,11 +690,6 @@ void uploadSerial()
             buffer[writeLen] = 0;
             buffer[writeLen+1] = 0;
             buffer[writeLen+2] = 0;
-
-            #ifdef DEBUG_PRINT
-            Serial.println("buffer after removing x: ");
-            Serial.println((char*)buffer);
-            #endif
           }
         }
 
