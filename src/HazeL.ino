@@ -45,6 +45,7 @@ char dataFileName[] = "data.txt";
 TinyGPSPlus gps;
 bool firstGpsRead = true;
 bool gpsFlag = false;
+bool gpsAwake = true;
 
 int localYear;
 int localMonth;
@@ -171,7 +172,10 @@ void setup() {
   TPSensor.init();
 
   // Put GPS to sleep
-  sleepGps();
+  // if (gpsAwake)
+  // {
+  //   toggleGps();
+  // }
 
   // Attach ISR for flipping buttonFlag when button is pressed
   attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), buttonISR, RISING);
@@ -249,20 +253,37 @@ void updateSampleSD()
     }
 
     // wake up GPS module
-    wakeGps();
+    if (!gpsAwake)
+    {
+      toggleGps();
+    }
+    unsigned long gpsCurMillis;
+    unsigned long gpsPrevMillis = millis();
 
     // Read GPS data until it's valid
     do
     {
+      // gpsCurMillis = millis();
+      // if (gpsCurMillis - gpsPrevMillis >= 15000)
+      // {
+      //   // Wake command may not have worked, toggle GPS asleep and awake
+      //   gpsPrevMillis = gpsCurMillis;
+      //   #ifdef DEBUG_PRINT
+      //   Serial.println("Re-sending GPS wake command");
+      //   #endif
+      //   wakeGps();
+      //   delay(200);
+      // }
+
       readGps();
 
       // make GPS reads interruptible by the button being pressed
       if (buttonFlag)
       {
-        for (int i = 0; i < 10; i++)
+        // Put GPS to sleep
+        if (gpsAwake)
         {
-          sleepGps();
-          delay(10);
+          toggleGps();
         }
         return;
       }
@@ -271,20 +292,24 @@ void updateSampleSD()
     // set time for now()
     setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
 
+    // store UTC time
+    utcTime = now();
+
     latitude = gps.location.lat();
     longitude = gps.location.lng();
     altitude = gps.altitude.meters();
 
     // This is a band-aid for a bug where the the GPS sleep command would sometimes fail
     // TODO: figure out a way to verify if the GPS is asleep
-    for (int i = 0; i < 10; i++)
+    // for (int i = 0; i < 10; i++)
+    // {
+    //   sleepGps();
+    //   delay(10);
+    // }
+    if (gpsAwake)
     {
-      sleepGps();
-      delay(10);
+      toggleGps();
     }
-
-    // store UTC time
-    utcTime = now();
 
     // convert to local time
     localTime = utcTime;
@@ -706,16 +731,22 @@ void readGps()
   }
 }
 
-// sleep the GPS module
-void sleepGps()
-{
-  sendGpsCommand("051,1");
-}
-
-// wake up the GPS module
-void wakeGps()
+// toggle GPS between sleep and wake
+void toggleGps()
 {
   sendGpsCommand("051,0");
+  delay(200);
+  gpsAwake = !gpsAwake;
+  #ifdef DEBUG_PRINT
+  if (gpsAwake)
+  {
+    Serial.println("GPS awake");
+  }
+  else
+  {
+    Serial.println("GPS asleep");
+  }
+  #endif
 }
 
 // send GPS command
