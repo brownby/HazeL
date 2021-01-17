@@ -33,7 +33,7 @@
 #define SWITCH_PIN A3 // pin for switch that sets continual update mode
 #define SD_CS_PIN 4 // CS pin of SD card, 4 on SD MKR proto shield
 #define CUR_YEAR 2021 // for GPS first fix error checking
-// #define DEBUG_PRINT
+#define DEBUG_PRINT
 
 HM3301 dustSensor;
 BMP280 TPSensor;
@@ -170,6 +170,9 @@ void setup() {
 
   TPSensor.init();
 
+  // Put GPS to sleep
+  sleepGps();
+
   // Attach ISR for flipping buttonFlag when button is pressed
   attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), buttonISR, RISING);
 
@@ -246,11 +249,7 @@ void updateSampleSD()
     }
 
     // wake up GPS module
-    for (int i = 0; i < 10; i++)
-    {
-      wakeGps();
-      delay(10);
-    }
+    wakeGps();
 
     // Read GPS data until it's valid
     do
