@@ -12,13 +12,12 @@
  */
 
 #include <SPI.h>
-#include "SdFat.h"
 #include <Wire.h>
-#include "secrets.h"
 #include "HM3301.h"
 
-// Make sure you have these four libraries installed in Documents/Arduino/libraries
+// Make sure you have these five libraries installed in Documents/Arduino/libraries
 #include <U8g2lib.h>
+#include "SdFat.h"
 #include <TinyGPS++.h>
 #include <TimeLib.h>
 #include "Seeed_BMP280.h"
