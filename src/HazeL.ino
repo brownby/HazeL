@@ -253,28 +253,24 @@ void updateSampleSD()
     }
     unsigned long gpsReadCurMillis;
     unsigned long gpsReadStartMillis = millis();
+    unsigned long gpsTimeoutMillis;
+    if (firstFlag)
+    {
+      gpsTimeoutMillis = GPS_FIRST_TIMEOUT;
+    }
+    {
+      gpsTimeoutMillis = GPS_TIMEOUT;
+    }
     #ifdef DEBUG_PRINT
     unsigned long preRead = millis();
     #endif
 
     // Read GPS data until it's valid
+    // 10 minute timeout for first GPS read
+    // 5 second timeout for further reads
     while (true)
     {
-      // Still deciding if I want to include timeout or not
       gpsReadCurMillis = millis();
-      // if (!firstFlag)
-      // {
-      //   if (gpsReadCurMillis - gpsReadPrevMillis >= 30000)
-      //   {
-      //     // Wake command may not have worked, toggle GPS again
-      //     gpsReadPrevMillis = gpsReadCurMillis;
-      //     toggleGps();
-      //     gpsAwake = true;
-      //     #ifdef DEBUG_PRINT
-      //     Serial.println("Re-sending GPS wake command");
-      //     #endif
-      //   }
-      // }
 
       readGps();
 
@@ -287,7 +283,7 @@ void updateSampleSD()
         Serial.println("GPS data valid");
         #endif
         // if GPS read takes longer than 5 seconds, just return stale data (don't timeout on first read)
-        if ((!firstFlag) && (gpsReadCurMillis - gpsReadStartMillis >= 5000))
+        if ((!firstFlag) && (gpsReadCurMillis - gpsReadStartMillis >= gpsTimeoutMillis))
         {
           prevTimeStamp = now();
           timeoutFlag = true;
@@ -399,29 +395,36 @@ void updateSampleSD()
       Serial.print("# ");
       Serial.print(msTimer);
       Serial.print(',');
-      Serial.print(localYear);
-      Serial.print('-');
-      Serial.print(localMonth);
-      Serial.print('-');
-      Serial.print(localDay);
-      Serial.print('T');
-      if(localHour < 10) Serial.print('0');
-      Serial.print(localHour);
-      Serial.print(':') ;
-      if(localMinute < 10) Serial.print('0');
-      Serial.print(localMinute);
-      Serial.print(':');
-      if(localSecond < 10) Serial.print('0');
-      Serial.print(localSecond);
-      Serial.print("+00:00");
 
-      Serial.print(',');
-      Serial.print(latitude, 5);
-      Serial.print(',');
-      Serial.print(longitude, 5);
-      Serial.print(',');
-      Serial.print(altitude, 2);
+      if (timeoutFlag)
+      {
+        Serial.print("GPS read failed");
+      }
+      else
+      {
+        Serial.print(localYear);
+        Serial.print('-');
+        Serial.print(localMonth);
+        Serial.print('-');
+        Serial.print(localDay);
+        Serial.print('T');
+        if(localHour < 10) Serial.print('0');
+        Serial.print(localHour);
+        Serial.print(':') ;
+        if(localMinute < 10) Serial.print('0');
+        Serial.print(localMinute);
+        Serial.print(':');
+        if(localSecond < 10) Serial.print('0');
+        Serial.print(localSecond);
+        Serial.print("+00:00");
 
+        Serial.print(',');
+        Serial.print(latitude, 5);
+        Serial.print(',');
+        Serial.print(longitude, 5);
+        Serial.print(',');
+        Serial.print(altitude, 2);
+      }
       Serial.print(',');
       Serial.print(temp.integral); Serial.print('.'); Serial.print(temp.fractional);
       Serial.print(',');
@@ -459,28 +462,36 @@ void updateSampleSD()
     dataFile.print("# ");
     dataFile.print(msTimer);
     dataFile.print(',');
-    dataFile.print(localYear);
-    dataFile.print('-');
-    dataFile.print(localMonth);
-    dataFile.print('-');
-    dataFile.print(localDay);
-    dataFile.print('T');
-    if(localHour < 10) dataFile.print('0');
-    dataFile.print(localHour);
-    dataFile.print(':') ;
-    if(localMinute < 10) dataFile.print('0');
-    dataFile.print(localMinute);
-    dataFile.print(':');
-    if(localSecond < 10) dataFile.print('0');
-    dataFile.print(localSecond);
-    dataFile.print("+00:00");
 
-    dataFile.print(',');
-    dataFile.print(latitude, 5);
-    dataFile.print(',');
-    dataFile.print(longitude, 5);
-    dataFile.print(',');
-    dataFile.print(altitude, 2);
+    if (timeoutFlag)
+    {
+      dataFile.println("GPS read failed");
+    }
+    else
+    {
+      dataFile.print(localYear);
+      dataFile.print('-');
+      dataFile.print(localMonth);
+      dataFile.print('-');
+      dataFile.print(localDay);
+      dataFile.print('T');
+      if(localHour < 10) dataFile.print('0');
+      dataFile.print(localHour);
+      dataFile.print(':') ;
+      if(localMinute < 10) dataFile.print('0');
+      dataFile.print(localMinute);
+      dataFile.print(':');
+      if(localSecond < 10) dataFile.print('0');
+      dataFile.print(localSecond);
+      dataFile.print("+00:00");
+
+      dataFile.print(',');
+      dataFile.print(latitude, 5);
+      dataFile.print(',');
+      dataFile.print(longitude, 5);
+      dataFile.print(',');
+      dataFile.print(altitude, 2);
+    }
 
     dataFile.print(',');
     dataFile.print(temp.integral); dataFile.print('.'); dataFile.print(temp.fractional);
@@ -551,24 +562,32 @@ void updateSampleSD()
     strcat(displayText, " ug/m\xb3");
     display(displayText, 24, false, false);
 
-    strcpy(timeText, monthText);
-    strcat(timeText, "/");
-    strcat(timeText, dayText);
-    strcat(timeText, "/");
-    strcat(timeText, yearText);
-    strcat(timeText, " ");
-    if(localHour < 10)
+
+    if(timeoutFlag)
     {
-      strcat(timeText, "0");
+      display("GPS read failed", 32, false, true);
     }
-    strcat(timeText, hourText);
-    strcat(timeText, ":");
-    if(localMinute < 10)
+    else
     {
-      strcat(timeText, "0");
+      strcpy(timeText, monthText);
+      strcat(timeText, "/");
+      strcat(timeText, dayText);
+      strcat(timeText, "/");
+      strcat(timeText, yearText);
+      strcat(timeText, " ");
+      if(localHour < 10)
+      {
+        strcat(timeText, "0");
+      }
+      strcat(timeText, hourText);
+      strcat(timeText, ":");
+      if(localMinute < 10)
+      {
+        strcat(timeText, "0");
+      }
+      strcat(timeText, minuteText);
+      display(timeText, 32, false, true);
     }
-    strcat(timeText, minuteText);
-    display(timeText, 32, false, true);
 
     ledFlag = true;
   }
