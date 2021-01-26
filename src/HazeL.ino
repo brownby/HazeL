@@ -465,7 +465,7 @@ void updateSampleSD()
 
     if (timeoutFlag)
     {
-      dataFile.println("GPS read failed");
+      dataFile.print("GPS read failed");
     }
     else
     {
@@ -636,8 +636,8 @@ void uploadSerial()
       }
       else
       {
+        writeLen = dataFile.available();  
         dataFile.read(buffer, dataFile.available());
-        writeLen = dataFile.available();
       }
       
       // look for and remove x if there
@@ -729,8 +729,8 @@ void uploadSerial()
         }
         else
         {
-          dataFile.read(buffer, dataFile.available());
           writeLen = dataFile.available();
+          dataFile.read(buffer, dataFile.available());
         }
         
         // look for and remove x if there
@@ -750,7 +750,7 @@ void uploadSerial()
           }
         }
 
-        tmpFile.print((char*)buffer);
+        tmpFile.write(buffer, writeLen);
         memset(buffer, 0, sizeof(buffer));
       }
       #ifdef DEBUG_PRINT
