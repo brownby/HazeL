@@ -27,7 +27,7 @@
 #define BLINK_TIME 30 // time in ms between LED blinks on successful write to SD
 #define GPS_TIME 10000 // time between GPS reads
 #define GPS_TIMEOUT 5000 // number of ms before GPS read times out
-#define GPS_FIRST_TIMEOUT 60UL*60UL*10UL // number of ms before first GPS read times out
+#define GPS_FIRST_TIMEOUT 600000 // number of ms before first GPS read times out
 #define BLINK_CNT 3 // number of times to blink LED on successful write
 #define BUTTON_PIN A2 // pin for button that triggers ThingSpeak updates
 #define SWITCH_PIN A3 // pin for switch that sets continual update mode
@@ -258,6 +258,7 @@ void updateSampleSD()
     {
       gpsTimeoutMillis = GPS_FIRST_TIMEOUT;
     }
+    else
     {
       gpsTimeoutMillis = GPS_TIMEOUT;
     }
@@ -274,21 +275,30 @@ void updateSampleSD()
 
       readGps();
 
-      // set time for now()
-      setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
+      // Timeout should happen if GPS data isn't valid
+      if (gpsReadCurMillis - gpsReadStartMillis >= gpsTimeoutMillis)
+      {
+        timeoutFlag = true;
+        #ifdef DEBUG_PRINT 
+        Serial.println("GPS timeout");
+        #endif
+        break;
+      }
 
       if (gps.date.isValid() && gps.time.isValid() && gps.location.isValid() && gps.altitude.isValid() && gps.date.year() == CUR_YEAR)
       {
         #ifdef DEBUG_PRINT
         Serial.println("GPS data valid");
         #endif
-        // if GPS read takes longer than 5 seconds, just return stale data (don't timeout on first read)
-        if ((!firstFlag) && (gpsReadCurMillis - gpsReadStartMillis >= gpsTimeoutMillis))
+
+        // set time for now()
+        setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
+
+        if (gpsReadCurMillis - gpsReadStartMillis >= gpsTimeoutMillis)
         {
-          prevTimeStamp = now();
           timeoutFlag = true;
           #ifdef DEBUG_PRINT 
-          Serial.println("GPS timeout, GPS data stale");
+          Serial.println("GPS timeout");
           #endif
           break;
         }
