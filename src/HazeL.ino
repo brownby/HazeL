@@ -46,6 +46,7 @@ TinyGPSPlus gps;
 bool firstGpsRead = true;
 bool gpsFlag = false;
 bool gpsAwake = true;
+bool gpsDisplayFail = false;
 
 int localYear;
 int localMonth;
@@ -275,10 +276,10 @@ void updateSampleSD()
 
       readGps();
 
-      // Timeout should happen if GPS data isn't valid
       if (gpsReadCurMillis - gpsReadStartMillis >= gpsTimeoutMillis)
       {
         timeoutFlag = true;
+        gpsDisplayFail = true;
         #ifdef DEBUG_PRINT 
         Serial.println("GPS timeout");
         #endif
@@ -294,28 +295,18 @@ void updateSampleSD()
         // set time for now()
         setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
 
-        if (gpsReadCurMillis - gpsReadStartMillis >= gpsTimeoutMillis)
+        if (now() > prevTimeStamp)
         {
-          timeoutFlag = true;
-          #ifdef DEBUG_PRINT 
-          Serial.println("GPS timeout");
-          #endif
+          prevTimeStamp = now();
+          gpsDisplayFail = false;
           break;
         }
+        #ifdef DEBUG_PRINT
         else
         {
-          if (now() > prevTimeStamp)
-          {
-            prevTimeStamp = now();
-            break;
-          }
-          #ifdef DEBUG_PRINT
-          else
-          {
-            Serial.println("Stale timestamp, continuing GPS read");
-          }
-          #endif
+          Serial.println("Stale timestamp, continuing GPS read");
         }
+        #endif
       
       }
 
@@ -573,7 +564,7 @@ void updateSampleSD()
     display(displayText, 24, false, false);
 
 
-    if(timeoutFlag)
+    if(gpsDisplayFail)
     {
       display("GPS read failed", 32, false, true);
     }
