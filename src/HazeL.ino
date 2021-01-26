@@ -26,6 +26,8 @@
 #define SAMP_TIME 2500 // number of ms between sensor readings
 #define BLINK_TIME 30 // time in ms between LED blinks on successful write to SD
 #define GPS_TIME 10000 // time between GPS reads
+#define GPS_TIMEOUT 5000 // number of ms before GPS read times out
+#define GPS_FIRST_TIMEOUT 60UL*60UL*10UL // number of ms before first GPS read times out
 #define BLINK_CNT 3 // number of times to blink LED on successful write
 #define BUTTON_PIN A2 // pin for button that triggers ThingSpeak updates
 #define SWITCH_PIN A3 // pin for switch that sets continual update mode
@@ -382,6 +384,8 @@ void updateSampleSD()
   uint16_t count_5p0um = dustSensor.data.count_5p0um;
   uint16_t count_10p0um = dustSensor.data.count_10p0um;
 
+  unsigned long msTimer = millis();
+
   // Display data to serial monitor and OLED display
   // Store data on SD card
   dataFile = SD.open(dataFileName, FILE_WRITE);
@@ -393,7 +397,7 @@ void updateSampleSD()
     if(gpsFlag)
     {
       Serial.print("# ");
-      Serial.print(curMillis);
+      Serial.print(msTimer);
       Serial.print(',');
       Serial.print(localYear);
       Serial.print('-');
@@ -424,6 +428,8 @@ void updateSampleSD()
       Serial.print(press.integral); Serial.print('.'); Serial.println(press.fractional);
     }
     
+    Serial.print(msTimer);
+    Serial.print(',');
     Serial.print(PM1p0_std);
     Serial.print(',');
     Serial.print(PM2p5_std);
@@ -451,7 +457,7 @@ void updateSampleSD()
   if(gpsFlag)
   {
     dataFile.print("# ");
-    dataFile.print(curMillis);
+    dataFile.print(msTimer);
     dataFile.print(',');
     dataFile.print(localYear);
     dataFile.print('-');
@@ -482,6 +488,8 @@ void updateSampleSD()
     dataFile.print(press.integral); dataFile.print('.'); dataFile.println(press.fractional);
   }
 
+    dataFile.print(msTimer);
+    dataFile.print(',');
     dataFile.print(PM1p0_std); // PM1.0 (standard)
     dataFile.print(",");
     dataFile.print(PM2p5_std); // PM2.5 (standard)
@@ -583,6 +591,8 @@ void updateSampleSD()
 void uploadSerial()
 {
   buttonISREn = false; // disable button ISR
+  uint8_t buffer[512] = {0}; // buffer to read/write data 512 bytes at a time
+  uint16_t writeLen = sizeof(buffer);
   display("Uploading data", 16, true, false);
   display("via serial port", 24, false, true);
   #ifdef DEBUG_PRINT
@@ -600,18 +610,35 @@ void uploadSerial()
     dataFile = SD.open(dataFileName, FILE_READ);
     while(dataFile.available())
     {
-      char c = dataFile.read();
-      // skip the 'x' line
-      if (c == 'x')
+      if (dataFile.available() > sizeof(buffer))
       {
-        dataFile.read(); // read '\r'
-        dataFile.read(); // read '\n'
-        continue;
+        dataFile.read(buffer, sizeof(buffer));
+        writeLen = sizeof(buffer);
       }
       else
       {
-        Serial.write(c);
+        dataFile.read(buffer, dataFile.available());
+        writeLen = dataFile.available();
       }
+      
+      // look for and remove x if there
+      for (int i = 0; i < writeLen; i++)
+      {
+        if (buffer[i] == 'x')
+        {
+          // move all data back by 3 bytes
+          writeLen -= 3;
+          for (int j = i; j < writeLen; j++)
+          {
+            buffer[j] = buffer[j+3];
+          }
+          buffer[writeLen] = 0;
+          buffer[writeLen+1] = 0;
+          buffer[writeLen+2] = 0;
+        }
+      }
+      Serial.write(buffer, writeLen);
+      memset(buffer, 0, sizeof(buffer));
     }
     dataFile.close();
   }
@@ -621,7 +648,6 @@ void uploadSerial()
     Serial.println("Mode 3, incremental upload");
     #endif
     bool xFound = false; // find the x, indicating last line read
-    uint32_t xPosition;  // store position of x to delete it later
     int i = 0;
     dataFile = SD.open(dataFileName, FILE_READ);
     if(dataFile)
@@ -636,7 +662,6 @@ void uploadSerial()
           if(c == 'x')
           {
             xFound = true;
-            xPosition = dataFile.position();
             dataFile.read(); // read '\r'
             dataFile.read(); // read '\n'
           }
@@ -667,8 +692,6 @@ void uploadSerial()
     dataFile.seek(0);
     // Open temporary file
     File tmpFile = SD.open("tmp.txt", FILE_WRITE);
-    uint8_t buffer[512] = {0}; // buffer to read/write data 512 bytes at a time
-    uint16_t writeLen = sizeof(buffer);
     #ifdef DEBUG_PRINT
     unsigned long preSD = millis();
     #endif
@@ -683,6 +706,7 @@ void uploadSerial()
         if (dataFile.available() > sizeof(buffer))
         {
           dataFile.read(buffer, sizeof(buffer));
+          writeLen = sizeof(buffer);
         }
         else
         {
@@ -709,10 +733,7 @@ void uploadSerial()
 
         tmpFile.print((char*)buffer);
         memset(buffer, 0, sizeof(buffer));
-        digitalWrite(LED_BUILTIN, HIGH);
       }
-
-      digitalWrite(LED_BUILTIN, LOW);
       #ifdef DEBUG_PRINT
       unsigned long postSD = millis();
       Serial.print("Moving contents of data.txt took: "); Serial.print(postSD - preSD); Serial.println(" ms");
