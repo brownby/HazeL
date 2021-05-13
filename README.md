@@ -33,6 +33,8 @@ The [Arduino MKR1000](https://store.arduino.cc/usa/arduino-mkr1000-with-headers-
 
 The Arduino code can be found in [HazeL.ino](src/HazeL.ino). While only tested on the MKR1000, it should be compatible with most Arduinos (**note:** this is not true of the code on the thingspeak branch, which takes advantage of the WiFi capabilities of the MKR1000 to create an IoT enabled version of HazeL). Feel free to submit an issue if you encounter issues on other platforms. 
 
+This repository is structured as a [PlatformIO](https://platformio.org/) project, if you'd like to use it within the Arduino IDE instead, move the contents of the [src](src) and [include](include) folders into a folder entitled `HazeL`, and open `HazeL.ino` in the Arduino IDE. 
+
 ## Grove modules
 
 ### [HM3301 dust sensor](https://www.seeedstudio.com/Grove-Laser-PM2-5-Sensor-HM3301.html)
