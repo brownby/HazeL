@@ -10,7 +10,7 @@ HazeL is a low-cost, easy to manufacture particulate matter (PM) sensor created 
 
 All modules and sensors in HazeL use the [Grove connector system](https://www.seeedstudio.com/category/Grove-c-1003.html).
 
-We have open sourced all of our design files in this repository, including the 3D printing files for the enclosure. If you are interested in deploying your own version of HazeL and have any questions beyond those answered by looking through this repository, feel free to reach out to Ben Brown at brown@g.harvard.edu. 
+We have open sourced all of our design files in this repository, including the 3D printing files for the [enclosure](enclosure). If you are interested in deploying your own version of HazeL and have any questions beyond those answered by looking through this repository, feel free to reach out to Ben Brown at brown@g.harvard.edu. 
 
 ## Device operation
 
