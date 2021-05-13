@@ -14,7 +14,7 @@ We have open sourced all of our design files in this repository, including the 3
 
 ## Device operation
 
-On start-up, HazeL initializes all sensors and modules, then begins collecting data. Data are stored in a file called `data.txt` (HazeL will create this file on the SD card if it doesn't already exist, otherwise it will just begin appending data). Particulate matter data are collected from the dust sensor every 2.5 seconds and saved to the SD card (see below for more information on the exact data returned). PM1.0, PM2.5, and PM10.0 concentrations are displayed on the OLED display every time data are saved.
+On start-up, HazeL initializes all sensors and modules, then begins collecting data. Data are stored in a file called `data.txt` (HazeL will create this file on the SD card if it doesn't already exist, otherwise it will just begin appending data). Particulate matter data are collected from the dust sensor every 2.5 seconds and saved to the SD card (see below for more information on the exact data returned). As data are saved to the SD card, they are also sent over USB, providing the option for capturing or displaying a live data stream (see [scripts](scripts) for more info). PM1.0, PM2.5, and PM10.0 concentrations are displayed on the OLED display every time data are saved.
 
 Every 10 seconds, a line of metadata (beginning with a `#`) is stored, including an ISO8601 UTC timestamp, latitude, longitude, altitude, temperature in degrees C, and pressure in pascals. To save energy, the GPS is put to sleep in between GPS reads.
 
