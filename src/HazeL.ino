@@ -28,8 +28,8 @@
 #define GPS_TIMEOUT 5000 // number of ms before GPS read times out
 #define GPS_FIRST_TIMEOUT 600000 // number of ms before first GPS read times out
 #define BLINK_CNT 3 // number of times to blink LED on successful write
-#define BUTTON_PIN A2 // pin for button that triggers ThingSpeak updates
-#define SWITCH_PIN A3 // pin for switch that sets continual update mode
+#define BUTTON_PIN A2 // pin for button that triggers data uploads over USB
+#define SWITCH_PIN A3 // pin for switch that sets upload mode (bulk or incremental)
 #define SD_CS_PIN 4 // CS pin of SD card, 4 on SD MKR proto shield
 #define CUR_YEAR 2021 // for GPS first fix error checking
 // #define DEBUG_PRINT
