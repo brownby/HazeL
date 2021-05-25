@@ -6,7 +6,7 @@
 
 HazeL is a low-cost, easy to manufacture particulate matter (PM) sensor created for the Harvard University SEAS course ESE6, Introduction to Environmental Science and Engineering. It was designed in response to the need for remote lab activites during the COVID-19 pandemic. Instead of students needing to share a limited number of expensive sensors, every student was able to collect their own data with their own personal sensor. 
 
-<img width="400" src="img/hazel_diagram.jpg" alt="HazeL"> 
+<img width="400" src="img/hazel_diagram.png" alt="HazeL"> 
 
 All modules and sensors in HazeL use the [Grove connector system](https://www.seeedstudio.com/category/Grove-c-1003.html).
 
