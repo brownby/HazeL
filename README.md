@@ -9,7 +9,27 @@ HazeL is a low-cost, easy to manufacture particulate matter (PM) sensor created 
 <p align="center">
 <img width="800" src="img/hazel_diagram.png" alt="HazeL"> 
 </p>
-All modules and sensors in HazeL use the [Grove connector system](https://www.seeedstudio.com/category/Grove-c-1003.html).
+The components that make up HazeL are, as numbered in the above image:
+
+1. Power switch
+2. GPS module
+3. OLED display
+4. MKR SD shield
+5. 9V battery
+6. Grove I2C hub
+7. MKR connector carrier
+8. Arduino MKR1000
+9. 10mm standoffs
+10. Data upload button
+11. MicroSD card
+12. Grove cable assemblies
+13. Acrylic panels
+14. 3D printed enclosure
+15. GPS antenna
+16. Temperature and pressure sensor
+17. Dust sensor
+
+All modules and sensors in HazeL use the [Grove connector system](https://www.seeedstudio.com/category/Grove-c-1003.html). You can find links to all of the components of HazeL in the next few sections.
 
 We have open sourced all of our design files in this repository, including the 3D printing files for the [enclosure](enclosure). If you are interested in deploying your own version of HazeL and have any questions beyond those answered by looking through this repository, feel free to reach out to Ben Brown at brown@g.harvard.edu. 
 
