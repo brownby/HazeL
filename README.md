@@ -33,7 +33,7 @@ All modules and sensors in HazeL use the [Grove connector system](https://www.se
 
 A simplified electrical schematic of HazeL is shown below. **A few things to note:** the level-shifting circuitry present on the MKR connector carrier is abstracted away in this schematic, but remember that Grove devices are 5V logic, while the MKR-series Arduinos are 3.3V logic devices. In addition, the A2 and A3 pins use the internal pull-down and pull-up resistors, respectively, of the SAMD21. Not all Arduinos have the option of internal pull-downs, so you may need a physical pull-down resistor on A2 (or alter the code slightly to use an internal pull-up). 
 
-<p align="center"
+<p align="center">
 <img width="800" src="img/hazel_electrical_diagram.png" alt="HazeL electrical schematic">
 </p>
 
