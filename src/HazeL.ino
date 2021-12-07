@@ -70,8 +70,10 @@ time_t prevTimeStamp = 0;
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 Encoder encRight(5, 6);
+Encoder encLeft(0, 1);
 
 long encRightOldPosition = 0;
+long encLeftOldPosition = 0;
 
 unsigned long prevSampMillis = 0;
 unsigned long prevLedMillis = 0;
@@ -98,13 +100,14 @@ uint8_t prevState = 0;
 
 // page = 0 two choice menu, collect data and upload data
 // page = 1 collect data menu -> two choices enter timestamp or get from GPS
-// page = 2 entering timestamp
-// page = 3 viewing SD card files
-// page = 4 data collection screen
-// page = 5 ??
+// page = 2 entering date
+// page = 3 entering time
+// page = 4 viewing SD card files
+// page = 5 data collection screen
 uint8_t page = 0;
 uint8_t prevPage = 0;
-uint8_t currentMenuSelection = 0;
+uint8_t currentVertMenuSelection = 0;
+uint8_t currentHoriMenuSelection = 0;
 
 void setup() {
   // initialize Serial port
@@ -237,38 +240,38 @@ void loop() {
     {
       if(page == 0)
       {
-        if(currentMenuSelection == 0)
+        if(currentVertMenuSelection == 0)
         {
           // state = 2; // collect data
           prevPage = page;
           page = 1;
         }
-        else if(currentMenuSelection == 1)
+        else if(currentVertMenuSelection == 1)
         {
           prevState = state;
           state = 3; // upload data
           prevPage = page;
-          page = 3;
+          page = 4;
         }
       }
       else if (page == 1)
       {
-        if(currentMenuSelection == 0)
+        if(currentVertMenuSelection == 0)
         {
           // Use GPS for time stamp
           prevState = state;
           state = 2; // collect data
           prevPage = page;
-          page = 4; 
+          page = 5; 
         }
-        else if(currentMenuSelection == 1)
+        else if(currentVertMenuSelection == 1)
         {
           // Use manual entry + RTC
           prevPage = page;
           page = 2; // enter time stamp
         }
       }
-      currentMenuSelection = 0; // reset menu selection before going to next page
+      currentVertMenuSelection = 0; // reset menu selection before going to next page
       encRightButtonFlag = false;
       encRightButtonISREn = true;
     }
@@ -908,6 +911,7 @@ char createChecksum(char* cmd)
 void updateMenuSelection()
 {
   long encRightPosition = encRight.read();
+  long encLeftPosition = encLeft.read();
   #ifdef DEBUG_PRINT
   // Serial.print("Right encoder position: ");
   // Serial.println(encRightPosition);
@@ -918,10 +922,10 @@ void updateMenuSelection()
     Serial.println("knob turned right");
     #endif
     encRightOldPosition = encRightPosition;
-    currentMenuSelection++;
+    currentVertMenuSelection++;
     if(page == 0 || page == 1) // only two choices on these pages
     {
-      if(currentMenuSelection > 1) currentMenuSelection = 1;
+      if(currentVertMenuSelection > 1) currentVertMenuSelection = 1;
     }
   }
   else if (encRightPosition < encRightOldPosition - 2) // counterclockwise, go up
@@ -930,10 +934,10 @@ void updateMenuSelection()
     Serial.println("knob turned left");
     #endif
     encRightOldPosition = encRightPosition;
-    currentMenuSelection--;
-    if(currentMenuSelection > 2) // overflow on unsigned value, will go up to 255
+    currentVertMenuSelection--;
+    if(currentVertMenuSelection > 2) // overflow on unsigned value, will go up to 255
     {
-      currentMenuSelection = 0;
+      currentVertMenuSelection = 0;
     }
   }
 }
@@ -967,33 +971,38 @@ void displayPage(uint8_t page)
 
   switch(page)
   {
-    case(0):
-      if (currentMenuSelection == 0)
+    case(0): // Initial menu
+      if (currentVertMenuSelection == 0)
       {
         updateDisplay("Start data collection\n", 0, true);
         updateDisplay("Upload data", 8, false);
       }
-      else if (currentMenuSelection == 1)
+      else if (currentVertMenuSelection == 1)
       {
         updateDisplay("Start data collection\n", 0, false);
         updateDisplay("Upload data", 8, true);
       }
       break;
-    case(1):
+    case(1): // Time entry method menu
       display.drawLine(0, 10, display.width()-1, 10, SSD1306_WHITE);
       updateDisplay("Time entry method?", 0, false);
-      if (currentMenuSelection == 0) 
+      if (currentVertMenuSelection == 0) 
       {
         updateDisplay("Auto (GPS)\n", 12, true);
         updateDisplay("Manual", 20, false);
       }
-      else if (currentMenuSelection == 1)
+      else if (currentVertMenuSelection == 1)
       {
         updateDisplay("Auto (GPS)\n", 12, false);
         updateDisplay("Manual", 20, true);
       }
       break;
-    case(4):
+    case(2): // Date entry
+      
+      break;
+    case(3): // Time entry
+      break;
+    case(5): // Data collection
       if(gpsFlag) 
       {
         if(firstGpsRead)
@@ -1093,7 +1102,9 @@ void updateDisplay(char* text, uint8_t height, bool bg)
 {
   // if(clear) display.clearDisplay();
 
-  display.setTextSize(1);
+  if(page == 2 || page == 3) display.setTextSize(2); // bigger for date/time entry
+  else display.setTextSize(1);
+
   if(bg) 
   {
     display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
