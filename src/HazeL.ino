@@ -39,6 +39,7 @@
 #define SCREEN_ADDRESS 0x3D
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
+#define ENC_RIGHT_BUTTON 7
 #define DEBUG_PRINT
 
 HM3301 dustSensor;
@@ -67,6 +68,9 @@ double altitude;
 time_t prevTimeStamp = 0;
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+Encoder encRight(5, 6);
+
+long encRightOldPosition = 0;
 
 unsigned long prevSampMillis = 0;
 unsigned long prevLedMillis = 0;
@@ -98,7 +102,7 @@ uint8_t prevState = 0;
 // page = 4 data collection screen
 // page = 5 generic text?
 uint8_t page = 0;
-
+uint8_t currentMenuSelection = 0;
 
 void setup() {
   // initialize Serial port
@@ -124,6 +128,7 @@ void setup() {
   pinMode(BUTTON_PIN, INPUT_PULLDOWN);
   pinMode(SWITCH_PIN, INPUT_PULLUP);
   pinMode(SD_CS_PIN, OUTPUT);
+  pinMode(ENC_RIGHT_BUTTON, INPUT_PULLDOWN);
 
   #ifdef DEBUG_PRINT
   Serial.println("Initialize SD");
@@ -199,16 +204,34 @@ void setup() {
   // enable button ISR
   buttonISREn = true;
 
-  state = 2;
+  state = 0;
 }
 
 void loop() {
   // check number of milliseconds since Arduino was turned on
   curMillis = millis();
 
-  if(state == 1)
+  if(state == 0)
   {
+    #ifdef DEBUG_PRINT
+    // Serial.print("Current menu selection: ");
+    // Serial.println(currentMenuSelection);
+    #endif 
+    updateMenuSelection();
+    displayPage(page);
 
+    if(digitalRead(ENC_RIGHT_BUTTON))
+    {
+      prevState = state;
+      if(currentMenuSelection == 0)
+      {
+        state = 2; // collect data
+      }
+      else if(currentMenuSelection == 1)
+      {
+        state = 3; // upload data
+      }
+    }
   }
 
   if(state == 2) // Collecting data
@@ -911,14 +934,56 @@ char createChecksum(char* cmd)
   return checksum;
 }
 
-// function for displaying various pages
+// Update current menu selection based on encoders
+void updateMenuSelection()
+{
+  long encRightPosition = encRight.read();
+  #ifdef DEBUG_PRINT
+  // Serial.print("Right encoder position: ");
+  // Serial.println(encRightPosition);
+  #endif
+  if (encRightPosition > encRightOldPosition + 2) // clockwise, go down
+  {
+    #ifdef DEBUG_PRINT
+    Serial.println("knob turned right");
+    #endif
+    encRightOldPosition = encRightPosition;
+    currentMenuSelection++;
+    if(page == 0)
+    {
+      if(currentMenuSelection > 1) currentMenuSelection = 1;
+    }
+  }
+  else if (encRightPosition < encRightOldPosition - 2) // counterclockwise, go up
+  {
+    #ifdef DEBUG_PRINT
+    Serial.println("knob turned left");
+    #endif
+    encRightOldPosition = encRightPosition;
+    currentMenuSelection--;
+    if(currentMenuSelection < 0)
+    {
+      currentMenuSelection = 0;
+    }
+  }
+}
+
+// function for displaying various pages/menus
 void displayPage(uint8_t page)
 {
   switch(page)
   {
     case(0):
-      updateDisplay("Start Data Collection", 0, true, false, true);
-      updateDisplay("Upload data", 0, false, true, false);
+      if (currentMenuSelection == 0) // turning clockwise, go down
+      {
+        updateDisplay("Start Data Collection\n", 0, true, false, true);
+        updateDisplay("Upload data", 8, false, true, false);
+      }
+      else if (currentMenuSelection == 1)
+      {
+        updateDisplay("Start Data Collection\n", 0, true, false, false);
+        updateDisplay("Upload data", 8, false, true, true);
+      }
       break;
   }
 }
