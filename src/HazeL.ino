@@ -91,6 +91,14 @@ char sd_buf[200]; // buffer to store single SD card line
 uint8_t state = 0;
 uint8_t prevState = 0;
 
+// page = 0 two choice menu, collect data and upload data
+// page = 1 collect data menu -> two choices enter timestamp or get from GPS
+// page = 2 entering timestamp
+// page = 3 viewing SD card files
+// page = 4 data collection screen
+// page = 5 generic text?
+uint8_t page = 0;
+
 
 void setup() {
   // initialize Serial port
@@ -105,7 +113,7 @@ void setup() {
   // Initialize comms with OLED display
   display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS);
 
-  displayMessage("Initializing...", 20, true, true);
+  updateDisplay("Initializing...", 20, true, true, false);
   delay(2500);
   #ifdef DEBUG_PRINT
   Serial.println("Initializing...");
@@ -120,7 +128,7 @@ void setup() {
   #ifdef DEBUG_PRINT
   Serial.println("Initialize SD");
   #endif
-  displayMessage("Checking SD", 20, true, true);
+  updateDisplay("Checking SD", 20, true, true, false);
   delay(2500);
 
   // Initialize SD card communication
@@ -129,8 +137,8 @@ void setup() {
     #ifdef DEBUG_PRINT
     Serial.println("Card failed");
     #endif
-    displayMessage("SD card failed", 16, true, false);
-    displayMessage("Reset device", 24, false, true);
+    updateDisplay("SD card failed", 16, true, false, false);
+    updateDisplay("Reset device", 24, false, true, false);
     while(true);
   }
   else
@@ -138,7 +146,7 @@ void setup() {
     #ifdef DEBUG_PRINT
     Serial.println("Card initialized successfully");
     #endif
-    displayMessage("SD card detected", 20, true, true);
+    updateDisplay("SD card detected", 20, true, true, false);
   }
   delay(2500);
 
@@ -148,7 +156,7 @@ void setup() {
   {
     strcpy(displayBuffer, "Creating ");
     strcat(displayBuffer, dataFileName);
-    displayMessage(displayBuffer, 20, true, true);
+    updateDisplay(displayBuffer, 20, true, true, false);
     delay(2500);
     #ifdef DEBUG_PRINT
     Serial.print("Creating ");
@@ -166,8 +174,8 @@ void setup() {
       #ifdef DEBUG_PRINT
       Serial.println("Couldn't open file");
       #endif
-      displayMessage("Unable to open file", 16, true, false);
-      displayMessage("Check SD, reset device", 24, false, true);
+      updateDisplay("Unable to open file", 16, true, false, false);
+      updateDisplay("Check SD, reset device", 24, false, true, false);
     }
 
   }
@@ -178,8 +186,8 @@ void setup() {
     #ifdef DEBUG_PRINT
     Serial.println("Failed to initialize dust sensor");
     #endif
-    displayMessage("Dust sensor init failed", 16, true, false);
-    displayMessage("Reset device", 24, false, true);
+    updateDisplay("Dust sensor init failed", 16, true, false, false);
+    updateDisplay("Reset device", 24, false, true, false);
     while(true);
   }
 
@@ -197,6 +205,11 @@ void setup() {
 void loop() {
   // check number of milliseconds since Arduino was turned on
   curMillis = millis();
+
+  if(state == 1)
+  {
+
+  }
 
   if(state == 2) // Collecting data
   {
@@ -262,12 +275,12 @@ void updateSampleSD()
   {
     if(firstGpsRead)
     {
-      displayMessage("Reading GPS...", 16, true, false);
-      displayMessage("(GPS warming up)", 24, false, true);
+      updateDisplay("Reading GPS...", 16, true, false, false);
+      updateDisplay("(GPS warming up)", 24, false, true, false);
       firstFlag = true;
     }
     else{
-      displayMessage("Reading GPS...", 20, true, true);
+      updateDisplay("Reading GPS...", 20, true, true, false);
     }
 
     // // wake up GPS module
@@ -574,22 +587,22 @@ void updateSampleSD()
     strcpy(displayText, "PM1.0:  ");
     strcat(displayText, pm1p0Text);
     strcat(displayText, " ug/m\xb3");
-    displayMessage(displayText, 8, true, false);
+    updateDisplay(displayText, 8, true, false, false);
 
     strcpy(displayText, "PM2.5:  ");
     strcat(displayText, pm2p5Text);
     strcat(displayText, " ug/m\xb3");
-    displayMessage(displayText, 16, false, false);
+    updateDisplay(displayText, 16, false, false, false);
 
     strcpy(displayText, "PM10.0: ");
     strcat(displayText, pm10p0Text);
     strcat(displayText, " ug/m\xb3");
-    displayMessage(displayText, 24, false, false);
+    updateDisplay(displayText, 24, false, false, false);
 
 
     if(gpsDisplayFail)
     {
-      displayMessage("GPS read failed", 32, false, true);
+      updateDisplay("GPS read failed", 32, false, true, false);
     }
     else
     {
@@ -610,7 +623,7 @@ void updateSampleSD()
         strcat(timeText, "0");
       }
       strcat(timeText, minuteText);
-      displayMessage(timeText, 32, false, true);
+      updateDisplay(timeText, 32, false, true, false);
     }
 
     ledFlag = true;
@@ -620,7 +633,7 @@ void updateSampleSD()
     #ifdef DEBUG_PRINT
     Serial.println("Couldn't open file");
     #endif
-    displayMessage("Couldn't open file", 20, true, true);
+    updateDisplay("Couldn't open file", 20, true, true, false);
   }
 
   if(gpsFlag)
@@ -636,8 +649,8 @@ void uploadSerial()
   buttonISREn = false; // disable button ISR
   uint8_t buffer[512] = {0}; // buffer to read/write data 512 bytes at a time
   uint16_t writeLen = sizeof(buffer);
-  displayMessage("Uploading data", 16, true, false);
-  displayMessage("via serial port", 24, false, true);
+  updateDisplay("Uploading data", 16, true, false, false);
+  updateDisplay("via serial port", 24, false, true, false);
   #ifdef DEBUG_PRINT
   Serial.println("Serial upload initiated");
   #endif
@@ -898,13 +911,32 @@ char createChecksum(char* cmd)
   return checksum;
 }
 
+// function for displaying various pages
+void displayPage(uint8_t page)
+{
+  switch(page)
+  {
+    case(0):
+      updateDisplay("Start Data Collection", 0, true, false, true);
+      updateDisplay("Upload data", 0, false, true, false);
+      break;
+  }
+}
+
 // function for displaying characters to OLED 
-void displayMessage(char* text, uint8_t height, bool clear, bool send)
+void updateDisplay(char* text, uint8_t height, bool clear, bool send, bool bg)
 {
   if(clear) display.clearDisplay();
 
   display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
+  if(bg) 
+  {
+    display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+  }
+  else
+  { 
+    display.setTextColor(SSD1306_WHITE);
+  }
   display.setCursor(0, height);
 
   display.print(text);
