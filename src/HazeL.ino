@@ -117,7 +117,7 @@ void setup() {
   // Initialize comms with OLED display
   display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS);
 
-  updateDisplay("Initializing...", 20, true, true, false);
+  updateDisplay("Initializing...", 20, false);
   delay(2500);
   #ifdef DEBUG_PRINT
   Serial.println("Initializing...");
@@ -133,7 +133,7 @@ void setup() {
   #ifdef DEBUG_PRINT
   Serial.println("Initialize SD");
   #endif
-  updateDisplay("Checking SD", 20, true, true, false);
+  updateDisplay("Checking SD", 20, false);
   delay(2500);
 
   // Initialize SD card communication
@@ -142,8 +142,8 @@ void setup() {
     #ifdef DEBUG_PRINT
     Serial.println("Card failed");
     #endif
-    updateDisplay("SD card failed", 16, true, false, false);
-    updateDisplay("Reset device", 24, false, true, false);
+    updateDisplay("SD card failed", 16, false);
+    updateDisplay("Reset device", 24, false);
     while(true);
   }
   else
@@ -151,7 +151,7 @@ void setup() {
     #ifdef DEBUG_PRINT
     Serial.println("Card initialized successfully");
     #endif
-    updateDisplay("SD card detected", 20, true, true, false);
+    updateDisplay("SD card detected", 20, false);
   }
   delay(2500);
 
@@ -161,7 +161,7 @@ void setup() {
   {
     strcpy(displayBuffer, "Creating ");
     strcat(displayBuffer, dataFileName);
-    updateDisplay(displayBuffer, 20, true, true, false);
+    updateDisplay(displayBuffer, 20, false);
     delay(2500);
     #ifdef DEBUG_PRINT
     Serial.print("Creating ");
@@ -179,8 +179,8 @@ void setup() {
       #ifdef DEBUG_PRINT
       Serial.println("Couldn't open file");
       #endif
-      updateDisplay("Unable to open file", 16, true, false, false);
-      updateDisplay("Check SD, reset device", 24, false, true, false);
+      updateDisplay("Unable to open file", 16, false);
+      updateDisplay("Check SD, reset device", 24, false);
     }
 
   }
@@ -191,8 +191,8 @@ void setup() {
     #ifdef DEBUG_PRINT
     Serial.println("Failed to initialize dust sensor");
     #endif
-    updateDisplay("Dust sensor init failed", 16, true, false, false);
-    updateDisplay("Reset device", 24, false, true, false);
+    updateDisplay("Dust sensor init failed", 16, false);
+    updateDisplay("Reset device", 24, false);
     while(true);
   }
 
@@ -211,6 +211,8 @@ void loop() {
   // check number of milliseconds since Arduino was turned on
   curMillis = millis();
 
+  displayPage(page);
+
   if(state == 0)
   {
     #ifdef DEBUG_PRINT
@@ -218,7 +220,6 @@ void loop() {
     // Serial.println(currentMenuSelection);
     #endif 
     updateMenuSelection();
-    displayPage(page);
 
     if(digitalRead(ENC_RIGHT_BUTTON))
     {
@@ -226,10 +227,12 @@ void loop() {
       if(currentMenuSelection == 0)
       {
         state = 2; // collect data
+        page = 4;
       }
       else if(currentMenuSelection == 1)
       {
         state = 3; // upload data
+        page = 3;
       }
     }
   }
@@ -296,14 +299,11 @@ void updateSampleSD()
 
   if(gpsFlag)
   {
+    displayPage(page);
+
     if(firstGpsRead)
     {
-      updateDisplay("Reading GPS...", 16, true, false, false);
-      updateDisplay("(GPS warming up)", 24, false, true, false);
       firstFlag = true;
-    }
-    else{
-      updateDisplay("Reading GPS...", 20, true, true, false);
     }
 
     // // wake up GPS module
@@ -586,69 +586,6 @@ void updateSampleSD()
     dataFile.println(count_10p0um); // >10.0um
     dataFile.close();
 
-    char displayText[50];
-    char timeText[50];
-    char pm1p0Text[10];
-    char pm2p5Text[10];
-    char pm10p0Text[10];
-    char hourText[10];
-    char minuteText[10];
-    char monthText[10];
-    char dayText[10];
-    char yearText[10];
-
-    itoa(PM1p0_atm, pm1p0Text, 10);
-    itoa(PM2p5_atm, pm2p5Text, 10);
-    itoa(PM10p0_atm, pm10p0Text, 10);
-
-    itoa(localHour, hourText, 10);
-    itoa(localMinute, minuteText, 10);
-    itoa(localMonth, monthText, 10);
-    itoa(localDay, dayText, 10);
-    itoa(localYear, yearText, 10);
-
-    strcpy(displayText, "PM1.0:  ");
-    strcat(displayText, pm1p0Text);
-    strcat(displayText, " ug/m\xb3");
-    updateDisplay(displayText, 8, true, false, false);
-
-    strcpy(displayText, "PM2.5:  ");
-    strcat(displayText, pm2p5Text);
-    strcat(displayText, " ug/m\xb3");
-    updateDisplay(displayText, 16, false, false, false);
-
-    strcpy(displayText, "PM10.0: ");
-    strcat(displayText, pm10p0Text);
-    strcat(displayText, " ug/m\xb3");
-    updateDisplay(displayText, 24, false, false, false);
-
-
-    if(gpsDisplayFail)
-    {
-      updateDisplay("GPS read failed", 32, false, true, false);
-    }
-    else
-    {
-      strcpy(timeText, monthText);
-      strcat(timeText, "/");
-      strcat(timeText, dayText);
-      strcat(timeText, "/");
-      strcat(timeText, yearText);
-      strcat(timeText, " ");
-      if(localHour < 10)
-      {
-        strcat(timeText, "0");
-      }
-      strcat(timeText, hourText);
-      strcat(timeText, ":");
-      if(localMinute < 10)
-      {
-        strcat(timeText, "0");
-      }
-      strcat(timeText, minuteText);
-      updateDisplay(timeText, 32, false, true, false);
-    }
-
     ledFlag = true;
   }
   else
@@ -656,7 +593,7 @@ void updateSampleSD()
     #ifdef DEBUG_PRINT
     Serial.println("Couldn't open file");
     #endif
-    updateDisplay("Couldn't open file", 20, true, true, false);
+    updateDisplay("Couldn't open file", 20, false);
   }
 
   if(gpsFlag)
@@ -672,8 +609,8 @@ void uploadSerial()
   buttonISREn = false; // disable button ISR
   uint8_t buffer[512] = {0}; // buffer to read/write data 512 bytes at a time
   uint16_t writeLen = sizeof(buffer);
-  updateDisplay("Uploading data", 16, true, false, false);
-  updateDisplay("via serial port", 24, false, true, false);
+  updateDisplay("Uploading data", 16, false);
+  updateDisplay("via serial port", 24, false);
   #ifdef DEBUG_PRINT
   Serial.println("Serial upload initiated");
   #endif
@@ -961,7 +898,7 @@ void updateMenuSelection()
     #endif
     encRightOldPosition = encRightPosition;
     currentMenuSelection--;
-    if(currentMenuSelection < 0)
+    if(currentMenuSelection > 2) // overflow on unsigned value, will go up to 255
     {
       currentMenuSelection = 0;
     }
@@ -971,27 +908,139 @@ void updateMenuSelection()
 // function for displaying various pages/menus
 void displayPage(uint8_t page)
 {
+  // On all pages add "select" and "back" indicators on the bottom of the screen
+  // On data collection page, only show "back"
+  display.clearDisplay();
+  display.drawLine(0, display.height()-10, display.width()-1, display.height()-10, SSD1306_WHITE);
+  display.drawLine(display.width()/3, display.height()-10, display.width()/3, display.height()-1, SSD1306_WHITE);
+  display.drawLine((2*display.width()/3)-1, display.height()-10, (2*display.width()/3)-1, display.height()-1, SSD1306_WHITE);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(10, display.height()-8);
+  display.print("Back");
+  if (page != 4)
+  {
+    display.setCursor((2*display.width()/3) + 4, display.height()-8);
+    display.print("Select");
+  }
+
+  #ifdef DEBUG_PRINT
+  Serial.print("Current menu selection: ");
+  Serial.println(currentMenuSelection);
+  #endif
+
   switch(page)
   {
     case(0):
       if (currentMenuSelection == 0) // turning clockwise, go down
       {
-        updateDisplay("Start Data Collection\n", 0, true, false, true);
-        updateDisplay("Upload data", 8, false, true, false);
+        updateDisplay("Start data collection\n", 0, true);
+        updateDisplay("Upload data", 8, false);
       }
       else if (currentMenuSelection == 1)
       {
-        updateDisplay("Start Data Collection\n", 0, true, false, false);
-        updateDisplay("Upload data", 8, false, true, true);
+        updateDisplay("Start data collection\n", 0, false);
+        updateDisplay("Upload data", 8, true);
+      }
+      break;
+    case(4):
+      if(gpsFlag) 
+      {
+        if(firstGpsRead)
+        {
+          updateDisplay("Reading GPS...", 16, false);
+          updateDisplay("(GPS warming up)", 24, false);
+        }
+        else
+        {
+          updateDisplay("Reading GPS...", 20, false);
+        }
+      }
+      else
+      {
+        uint16_t PM1p0_std = dustSensor.data.PM1p0_std;
+        uint16_t PM2p5_std = dustSensor.data.PM2p5_std;
+        uint16_t PM10p0_std = dustSensor.data.PM10p0_std;
+        uint16_t PM1p0_atm = dustSensor.data.PM1p0_atm;
+        uint16_t PM2p5_atm = dustSensor.data.PM2p5_atm;
+        uint16_t PM10p0_atm = dustSensor.data.PM10p0_atm;
+        uint16_t count_0p3um = dustSensor.data.count_0p3um;
+        uint16_t count_0p5um = dustSensor.data.count_0p5um;
+        uint16_t count_1p0um = dustSensor.data.count_1p0um;
+        uint16_t count_2p5um = dustSensor.data.count_2p5um;
+        uint16_t count_5p0um = dustSensor.data.count_5p0um;
+        uint16_t count_10p0um = dustSensor.data.count_10p0um;
+
+        char displayText[50];
+        char timeText[50];
+        char pm1p0Text[10];
+        char pm2p5Text[10];
+        char pm10p0Text[10];
+        char hourText[10];
+        char minuteText[10];
+        char monthText[10];
+        char dayText[10];
+        char yearText[10];
+
+        itoa(PM1p0_atm, pm1p0Text, 10);
+        itoa(PM2p5_atm, pm2p5Text, 10);
+        itoa(PM10p0_atm, pm10p0Text, 10);
+
+        itoa(localHour, hourText, 10);
+        itoa(localMinute, minuteText, 10);
+        itoa(localMonth, monthText, 10);
+        itoa(localDay, dayText, 10);
+        itoa(localYear, yearText, 10);
+
+        strcpy(displayText, "PM1.0:  ");
+        strcat(displayText, pm1p0Text);
+        strcat(displayText, " ug/m3");
+        updateDisplay(displayText, 8, false);
+
+        strcpy(displayText, "PM2.5:  ");
+        strcat(displayText, pm2p5Text);
+        strcat(displayText, " ug/m3");
+        updateDisplay(displayText, 16, false);
+
+        strcpy(displayText, "PM10.0: ");
+        strcat(displayText, pm10p0Text);
+        strcat(displayText, " ug/m3");
+        updateDisplay(displayText, 24, false);
+
+        if(gpsDisplayFail)
+        {
+          updateDisplay("GPS read failed", 32, false);
+        }
+        else
+        {
+          strcpy(timeText, monthText);
+          strcat(timeText, "/");
+          strcat(timeText, dayText);
+          strcat(timeText, "/");
+          strcat(timeText, yearText);
+          strcat(timeText, " ");
+          if(localHour < 10)
+          {
+            strcat(timeText, "0");
+          }
+          strcat(timeText, hourText);
+          strcat(timeText, ":");
+          if(localMinute < 10)
+          {
+            strcat(timeText, "0");
+          }
+          strcat(timeText, minuteText);
+          updateDisplay(timeText, 32, false);
+        }
       }
       break;
   }
+  display.display();
 }
 
 // function for displaying characters to OLED 
-void updateDisplay(char* text, uint8_t height, bool clear, bool send, bool bg)
+void updateDisplay(char* text, uint8_t height, bool bg)
 {
-  if(clear) display.clearDisplay();
+  // if(clear) display.clearDisplay();
 
   display.setTextSize(1);
   if(bg) 
@@ -1006,7 +1055,7 @@ void updateDisplay(char* text, uint8_t height, bool clear, bool send, bool bg)
 
   display.print(text);
 
-  if(send) display.display();
+  // if(send) display.display();
 
 }
 
