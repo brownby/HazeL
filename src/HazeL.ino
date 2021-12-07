@@ -39,7 +39,7 @@
 #define SCREEN_ADDRESS 0x3D
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
-// #define DEBUG_PRINT
+#define DEBUG_PRINT
 
 HM3301 dustSensor;
 BMP280 TPSensor;
@@ -83,6 +83,14 @@ bool firstLineDone = false; // flag for first line (titles) having been read
 bool newDataFile = false;
 uint32_t lastLinePosition = 0;
 char sd_buf[200]; // buffer to store single SD card line
+
+// state = 0 initializing
+// state = 1 navigating menu
+// state = 2 collecting data
+// state = 3 uploading data
+uint8_t state = 0;
+uint8_t prevState = 0;
+
 
 void setup() {
   // initialize Serial port
@@ -182,40 +190,47 @@ void setup() {
 
   // enable button ISR
   buttonISREn = true;
+
+  state = 2;
 }
 
 void loop() {
   // check number of milliseconds since Arduino was turned on
   curMillis = millis();
 
-  // Blink LED upon successful SD write
-  if(ledFlag)
+  if(state == 2) // Collecting data
   {
-    if(curMillis - prevLedMillis >= BLINK_TIME)
+    // Blink LED upon successful SD write
+    if(ledFlag)
     {
-      prevLedMillis = curMillis;
-      blinkLed();
+      if(curMillis - prevLedMillis >= BLINK_TIME)
+      {
+        prevLedMillis = curMillis;
+        blinkLed();
+      }
     }
-  }
 
-  // Read sensor and update SD card every SAMP_TIME milliseconds
-  if(curMillis - prevSampMillis >= SAMP_TIME)
-  {
-    prevSampMillis = curMillis;
-    if(curMillis - prevGpsMillis >= GPS_TIME)
+    // Read sensor and update SD card every SAMP_TIME milliseconds
+    if(curMillis - prevSampMillis >= SAMP_TIME)
     {
-      gpsFlag = true;
-      prevGpsMillis = curMillis;
+      prevSampMillis = curMillis;
+      if(curMillis - prevGpsMillis >= GPS_TIME)
+      {
+        gpsFlag = true;
+        prevGpsMillis = curMillis;
+      }
+      updateSampleSD();
     }
-    updateSampleSD();
   }
 
   // Upload data.txt to serial monitor if buttonFlag has been set (inside buttonISR)
-  if(buttonFlag)
+  if(state == 3) // uploading data
   {
     buttonFlag = false;
     buttonISREn = true;
     uploadSerial();
+    state = prevState;
+    prevState = 3;
   }
 
 }
@@ -225,6 +240,8 @@ void buttonISR()
 {
   if(buttonISREn == true)
   {
+    prevState = state;
+    state = 3;
     buttonFlag = true;
     buttonISREn = false;
   }
