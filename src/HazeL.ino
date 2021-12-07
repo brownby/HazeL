@@ -100,7 +100,7 @@ uint8_t prevState = 0;
 // page = 2 entering timestamp
 // page = 3 viewing SD card files
 // page = 4 data collection screen
-// page = 5 generic text?
+// page = 5 ??
 uint8_t page = 0;
 uint8_t currentMenuSelection = 0;
 
@@ -117,7 +117,9 @@ void setup() {
   // Initialize comms with OLED display
   display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS);
 
+  display.clearDisplay();
   updateDisplay("Initializing...", 20, false);
+  display.display();
   delay(2500);
   #ifdef DEBUG_PRINT
   Serial.println("Initializing...");
@@ -133,7 +135,9 @@ void setup() {
   #ifdef DEBUG_PRINT
   Serial.println("Initialize SD");
   #endif
+  display.clearDisplay();
   updateDisplay("Checking SD", 20, false);
+  display.display();
   delay(2500);
 
   // Initialize SD card communication
@@ -142,8 +146,10 @@ void setup() {
     #ifdef DEBUG_PRINT
     Serial.println("Card failed");
     #endif
+    display.clearDisplay();
     updateDisplay("SD card failed", 16, false);
     updateDisplay("Reset device", 24, false);
+    display.display();
     while(true);
   }
   else
@@ -151,7 +157,9 @@ void setup() {
     #ifdef DEBUG_PRINT
     Serial.println("Card initialized successfully");
     #endif
+    display.clearDisplay();
     updateDisplay("SD card detected", 20, false);
+    display.display();
   }
   delay(2500);
 
@@ -161,7 +169,9 @@ void setup() {
   {
     strcpy(displayBuffer, "Creating ");
     strcat(displayBuffer, dataFileName);
+    display.clearDisplay();
     updateDisplay(displayBuffer, 20, false);
+    display.display();
     delay(2500);
     #ifdef DEBUG_PRINT
     Serial.print("Creating ");
@@ -179,8 +189,10 @@ void setup() {
       #ifdef DEBUG_PRINT
       Serial.println("Couldn't open file");
       #endif
+      display.clearDisplay();
       updateDisplay("Unable to open file", 16, false);
       updateDisplay("Check SD, reset device", 24, false);
+      display.display();
     }
 
   }
@@ -191,8 +203,10 @@ void setup() {
     #ifdef DEBUG_PRINT
     Serial.println("Failed to initialize dust sensor");
     #endif
+    display.clearDisplay();
     updateDisplay("Dust sensor init failed", 16, false);
     updateDisplay("Reset device", 24, false);
+    display.display();
     while(true);
   }
 
@@ -215,10 +229,6 @@ void loop() {
 
   if(state == 0)
   {
-    #ifdef DEBUG_PRINT
-    // Serial.print("Current menu selection: ");
-    // Serial.println(currentMenuSelection);
-    #endif 
     updateMenuSelection();
 
     if(digitalRead(ENC_RIGHT_BUTTON))
@@ -912,21 +922,25 @@ void displayPage(uint8_t page)
   // On data collection page, only show "back"
   display.clearDisplay();
   display.drawLine(0, display.height()-10, display.width()-1, display.height()-10, SSD1306_WHITE);
-  display.drawLine(display.width()/3, display.height()-10, display.width()/3, display.height()-1, SSD1306_WHITE);
-  display.drawLine((2*display.width()/3)-1, display.height()-10, (2*display.width()/3)-1, display.height()-1, SSD1306_WHITE);
+  display.drawLine(display.width()/2 - 1, display.height()-10, display.width()/2 - 1, display.height()-1, SSD1306_WHITE);
+  // display.drawLine((2*display.width()/3)-1, display.height()-10, (2*display.width()/3)-1, display.height()-1, SSD1306_WHITE);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(10, display.height()-8);
-  display.print("Back");
+  display.print("Back ");
+  if(page == 2) // only the date and time page uses the left knob for left-right
+  {
+    display.cp437(true);
+    display.print("\x11\x10");
+    display.cp437(false);
+  }
   if (page != 4)
   {
-    display.setCursor((2*display.width()/3) + 4, display.height()-8);
-    display.print("Select");
+    display.setCursor((display.width()/2) + 5, display.height()-8);
+    display.cp437(true);
+    display.print("\x1e\x1f");
+    display.cp437(false);
+    display.print(" Select");
   }
-
-  #ifdef DEBUG_PRINT
-  Serial.print("Current menu selection: ");
-  Serial.println(currentMenuSelection);
-  #endif
 
   switch(page)
   {
