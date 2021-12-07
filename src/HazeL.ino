@@ -23,6 +23,7 @@
 #include "SdFat.h"
 #include <TinyGPS++.h>
 #include <TimeLib.h>
+#include <RTCZero.h>
 #include "Seeed_BMP280.h"
 
 #define SAMP_TIME 2500 // number of ms between sensor readings
@@ -77,8 +78,8 @@ unsigned long prevLedMillis = 0;
 unsigned long prevGpsMillis = 0;
 unsigned long curMillis;
 
-volatile bool buttonFlag = false;
-volatile bool buttonISREn = false;
+volatile bool encRightButtonFlag = false;
+volatile bool encRightButtonISREn = false;
 
 bool ledFlag = false;
 uint8_t ledCount = 0;
@@ -102,6 +103,7 @@ uint8_t prevState = 0;
 // page = 4 data collection screen
 // page = 5 ??
 uint8_t page = 0;
+uint8_t prevPage = 0;
 uint8_t currentMenuSelection = 0;
 
 void setup() {
@@ -213,10 +215,10 @@ void setup() {
   TPSensor.init();
 
   // Attach ISR for flipping buttonFlag when button is pressed
-  attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), buttonISR, RISING);
+  attachInterrupt(digitalPinToInterrupt(ENC_RIGHT_BUTTON), encRightButtonISR, RISING);
 
   // enable button ISR
-  buttonISREn = true;
+  encRightButtonISREn = true;
 
   state = 0;
 }
@@ -231,19 +233,44 @@ void loop() {
   {
     updateMenuSelection();
 
-    if(digitalRead(ENC_RIGHT_BUTTON))
+    if(encRightButtonFlag)
     {
-      prevState = state;
-      if(currentMenuSelection == 0)
+      if(page == 0)
       {
-        state = 2; // collect data
-        page = 4;
+        if(currentMenuSelection == 0)
+        {
+          // state = 2; // collect data
+          prevPage = page;
+          page = 1;
+        }
+        else if(currentMenuSelection == 1)
+        {
+          prevState = state;
+          state = 3; // upload data
+          prevPage = page;
+          page = 3;
+        }
       }
-      else if(currentMenuSelection == 1)
+      else if (page == 1)
       {
-        state = 3; // upload data
-        page = 3;
+        if(currentMenuSelection == 0)
+        {
+          // Use GPS for time stamp
+          prevState = state;
+          state = 2; // collect data
+          prevPage = page;
+          page = 4; 
+        }
+        else if(currentMenuSelection == 1)
+        {
+          // Use manual entry + RTC
+          prevPage = page;
+          page = 2; // enter time stamp
+        }
       }
+      currentMenuSelection = 0; // reset menu selection before going to next page
+      encRightButtonFlag = false;
+      encRightButtonISREn = true;
     }
   }
 
@@ -275,8 +302,6 @@ void loop() {
   // Upload data.txt to serial monitor if buttonFlag has been set (inside buttonISR)
   if(state == 3) // uploading data
   {
-    buttonFlag = false;
-    buttonISREn = true;
     uploadSerial();
     state = prevState;
     prevState = 3;
@@ -285,14 +310,12 @@ void loop() {
 }
 
 // ISR for button being pressed
-void buttonISR()
+void encRightButtonISR()
 {
-  if(buttonISREn == true)
+  if(encRightButtonISREn == true)
   {
-    prevState = state;
-    state = 3;
-    buttonFlag = true;
-    buttonISREn = false;
+    encRightButtonFlag = true;
+    encRightButtonISREn = false;
   }
 }
 
@@ -380,7 +403,7 @@ void updateSampleSD()
       }
 
       // make GPS reads interruptible by the button being pressed
-      if (buttonFlag)
+      if (encRightButtonFlag)
       {
         // Put GPS to sleep
         if (gpsAwake)
@@ -616,7 +639,7 @@ void updateSampleSD()
 // upload SD card data over serial port
 void uploadSerial()
 {
-  buttonISREn = false; // disable button ISR
+  encRightButtonISREn = false; // disable button ISR
   uint8_t buffer[512] = {0}; // buffer to read/write data 512 bytes at a time
   uint16_t writeLen = sizeof(buffer);
   updateDisplay("Uploading data", 16, false);
@@ -797,7 +820,7 @@ void uploadSerial()
       #endif
     }
   }
-  buttonISREn = true;
+  encRightButtonISREn = true;
 }
 
 // blink LED
@@ -896,7 +919,7 @@ void updateMenuSelection()
     #endif
     encRightOldPosition = encRightPosition;
     currentMenuSelection++;
-    if(page == 0)
+    if(page == 0 || page == 1) // only two choices on these pages
     {
       if(currentMenuSelection > 1) currentMenuSelection = 1;
     }
@@ -945,7 +968,7 @@ void displayPage(uint8_t page)
   switch(page)
   {
     case(0):
-      if (currentMenuSelection == 0) // turning clockwise, go down
+      if (currentMenuSelection == 0)
       {
         updateDisplay("Start data collection\n", 0, true);
         updateDisplay("Upload data", 8, false);
@@ -954,6 +977,20 @@ void displayPage(uint8_t page)
       {
         updateDisplay("Start data collection\n", 0, false);
         updateDisplay("Upload data", 8, true);
+      }
+      break;
+    case(1):
+      display.drawLine(0, 10, display.width()-1, 10, SSD1306_WHITE);
+      updateDisplay("Time entry method?", 0, false);
+      if (currentMenuSelection == 0) 
+      {
+        updateDisplay("Auto (GPS)\n", 12, true);
+        updateDisplay("Manual", 20, false);
+      }
+      else if (currentMenuSelection == 1)
+      {
+        updateDisplay("Auto (GPS)\n", 12, false);
+        updateDisplay("Manual", 20, true);
       }
       break;
     case(4):
