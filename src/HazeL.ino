@@ -974,7 +974,7 @@ void updateMenuSelection()
   if (encRightPosition > encRightOldPosition + 2) // clockwise, go down
   {
     #ifdef DEBUG_PRINT
-    Serial.println("knob turned right");
+    Serial.println("Right knob turned cw");
     #endif
     encRightOldPosition = encRightPosition;
     currentVertMenuSelection++;
@@ -987,6 +987,7 @@ void updateMenuSelection()
         if(currentHoriMenuSelection == 0) // month
         {
           if(currentVertMenuSelection > 12) currentVertMenuSelection = 0;
+          manualMonth = currentVertMenuSelection;
         }
         else if(currentHoriMenuSelection == 1) // day
         {
@@ -1010,19 +1011,63 @@ void updateMenuSelection()
               if(currentVertMenuSelection > 28) currentVertMenuSelection = 0;
             }
           }
+          manualDay = currentVertMenuSelection;
         }
+        else if(currentHoriMenuSelection == 2) // year
+        {
+          if(currentVertMenuSelection > 2099) 
+          {
+            currentVertMenuSelection = 0;
+          }
+          else if(currentVertMenuSelection < CUR_YEAR)
+          {
+            currentVertMenuSelection = CUR_YEAR;
+          }
+          manualYear = currentVertMenuSelection;
+        }
+        break;
     }
   }
   else if (encRightPosition < encRightOldPosition - 2) // counterclockwise, go up
   {
     #ifdef DEBUG_PRINT
-    Serial.println("knob turned left");
+    Serial.println("Right knob turned ccw");
     #endif
     encRightOldPosition = encRightPosition;
     currentVertMenuSelection--;
     if(currentVertMenuSelection > 2) // overflow on unsigned value, will go up to 255
     {
       currentVertMenuSelection = 0;
+    }
+  }
+
+  if(encLeftPosition > encLeftOldPosition + 2)
+  {
+    #ifdef DEBUG_PRINT
+    Serial.println("Left knob turned cw");
+    #endif
+    if(page == 2 || page == 3) // date or time entry
+    {
+      currentHoriMenuSelection++;
+      if(page == 2)
+      {
+        if(currentHoriMenuSelection > 3) currentHoriMenuSelection = 3;
+      }
+      else if(page == 3)
+      {
+        if(currentHoriMenuSelection > 2) currentHoriMenuSelection = 2;
+      }
+    }
+  }
+  else if(encLeftPosition < encLeftOldPosition - 2)
+  {
+    #ifdef DEBUG_PRINT
+    Serial.println("Left knob turned ccw");
+    #endif
+    if(page == 2 || page == 3)
+    {
+      currentHoriMenuSelection--;
+      if(currentHoriMenuSelection > 10) currentHoriMenuSelection = 0;
     }
   }
 }
