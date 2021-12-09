@@ -40,8 +40,8 @@
 #define SCREEN_ADDRESS 0x3D
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 128
-#define ENC_RIGHT_BUTTON 3
-#define ENC_LEFT_BUTTON 2
+#define ENC_RIGHT_BUTTON A1
+#define ENC_LEFT_BUTTON 7
 #define DEBUG_PRINT
 
 HM3301 dustSensor;
@@ -102,7 +102,7 @@ uint8_t state = 0;
 uint8_t prevState = 0;
 
 // page = 0 two choice menu, collect data and upload data
-// page = 1 collect data menu -> two choices enter timestamp or get from GPS
+// page = 1 time entry choice menu -> two choices enter timestamp or get from GPS
 // page = 2 entering date
 // page = 3 entering time
 // page = 4 viewing SD card files
@@ -310,6 +310,45 @@ void loop() {
     uploadSerial();
     state = prevState;
     prevState = 3;
+  }
+
+  if(encLeftButtonFlag) // back button
+  {
+    switch(page)
+    {
+      case 1: // time entry choice menu
+        page = 0;
+        prevState = state;
+        state = 0;
+        break;
+      case 2: // date entry page
+        page = 1;
+        prevState = state;
+        state = 0;
+        break;
+      case 3: // time entry page
+        page = 2;
+        prevState = state;
+        state = 0;
+        break;
+      case 4: // SD card file list menu
+        page = 0;
+        prevState = state;
+        state = 0;
+        break;
+      case 5: // data collection screen
+        page = 1;
+        prevState = state;
+        state = 0;
+        break;
+    }
+    encLeftButtonFlag = false;
+    encLeftButtonISREn = true;
+    #ifdef DEBUG_PRINT
+    Serial.println("Back button pressed");
+    Serial.print("Going to page: ");
+    Serial.println(page);
+    #endif
   }
 
 }
@@ -924,8 +963,8 @@ void updateMenuSelection()
   long encRightPosition = encRight.read();
   long encLeftPosition = encLeft.read();
   #ifdef DEBUG_PRINT
-  Serial.print("Right encoder position: ");
-  Serial.println(encRightPosition);
+  // Serial.print("Right encoder position: ");
+  // Serial.println(encRightPosition);
   #endif
   if (encRightPosition > encRightOldPosition + 2) // clockwise, go down
   {
