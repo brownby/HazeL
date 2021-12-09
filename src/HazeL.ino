@@ -52,7 +52,7 @@ File dataFile;
 char dataFileName[] = "data.txt";
 
 TinyGPSPlus gps;
-bool firstGpsRead = true;
+bool firstGpsRead = false;
 bool gpsFlag = false;
 bool gpsAwake = true;
 bool gpsDisplayFail = false;
@@ -68,6 +68,11 @@ double longitude;
 double altitude;
 
 time_t prevTimeStamp = 0;
+uint8_t manualMonth = 1;
+uint8_t manualDay = 1;
+uint8_t manualYear = CUR_YEAR;
+uint8_t manualHour = 0;
+uint8_t manualMinute = 0;
 
 Adafruit_SSD1327 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 Encoder encRight(4, 5);
@@ -126,7 +131,7 @@ void setup() {
   display.begin(SCREEN_ADDRESS);
 
   display.clearDisplay();
-  updateDisplay("Initializing...", 20, false);
+  updateDisplay("Initializing...", 40, false);
   display.display();
   delay(2500);
   #ifdef DEBUG_PRINT
@@ -145,7 +150,7 @@ void setup() {
   Serial.println("Initialize SD");
   #endif
   display.clearDisplay();
-  updateDisplay("Checking SD", 20, false);
+  updateDisplay("Checking SD", 40, false);
   display.display();
   delay(2500);
 
@@ -156,8 +161,8 @@ void setup() {
     Serial.println("Card failed");
     #endif
     display.clearDisplay();
-    updateDisplay("SD card failed", 16, false);
-    updateDisplay("Reset device", 24, false);
+    updateDisplay("SD card failed", 32, false);
+    updateDisplay("Reset device", 48, false);
     display.display();
     while(true);
   }
@@ -167,7 +172,7 @@ void setup() {
     Serial.println("Card initialized successfully");
     #endif
     display.clearDisplay();
-    updateDisplay("SD card detected", 20, false);
+    updateDisplay("SD card detected", 40, false);
     display.display();
   }
   delay(2500);
@@ -179,7 +184,7 @@ void setup() {
     strcpy(displayBuffer, "Creating ");
     strcat(displayBuffer, dataFileName);
     display.clearDisplay();
-    updateDisplay(displayBuffer, 20, false);
+    updateDisplay(displayBuffer, 40, false);
     display.display();
     delay(2500);
     #ifdef DEBUG_PRINT
@@ -199,8 +204,8 @@ void setup() {
       Serial.println("Couldn't open file");
       #endif
       display.clearDisplay();
-      updateDisplay("Unable to open file", 16, false);
-      updateDisplay("Check SD, reset device", 24, false);
+      updateDisplay("Unable to open file", 32, false);
+      updateDisplay("Check SD, reset device", 48, false);
       display.display();
     }
 
@@ -213,8 +218,8 @@ void setup() {
     Serial.println("Failed to initialize dust sensor");
     #endif
     display.clearDisplay();
-    updateDisplay("Dust sensor init failed", 16, false);
-    updateDisplay("Reset device", 24, false);
+    updateDisplay("Dust sensor init failed", 32, false);
+    updateDisplay("Reset device", 48, false);
     display.display();
     while(true);
   }
@@ -973,9 +978,39 @@ void updateMenuSelection()
     #endif
     encRightOldPosition = encRightPosition;
     currentVertMenuSelection++;
-    if(page == 0 || page == 1) // only two choices on these pages
+    switch (page)
     {
-      if(currentVertMenuSelection > 1) currentVertMenuSelection = 1;
+      case 0: case 1: // initial two menus
+        if(currentVertMenuSelection > 1) currentVertMenuSelection = 1; // only two choices on these pages
+        break;
+      case 2: // entering date
+        if(currentHoriMenuSelection == 0) // month
+        {
+          if(currentVertMenuSelection > 12) currentVertMenuSelection = 0;
+        }
+        else if(currentHoriMenuSelection == 1) // day
+        {
+          if(currentVertMenuSelection == 3 || currentVertMenuSelection == 5 || currentVertMenuSelection == 8 || currentVertMenuSelection == 10) // April, June, September, November
+          {
+            if(currentVertMenuSelection > 30) currentVertMenuSelection = 0;
+          }
+          else if(currentVertMenuSelection == 0 || currentVertMenuSelection == 2 || currentVertMenuSelection == 4 || currentVertMenuSelection == 6 || currentVertMenuSelection == 7 || currentVertMenuSelection == 9 || currentVertMenuSelection == 11)
+          {
+            // January, March, May, July, August, October, December
+            if(currentVertMenuSelection > 31) currentVertMenuSelection = 0;
+          }
+          else if(currentVertMenuSelection == 1) // February
+          {
+            if(manualYear % 4 == 0) 
+            {
+              if(currentVertMenuSelection > 29) currentVertMenuSelection = 0;
+            }
+            else
+            {
+              if(currentVertMenuSelection > 28) currentVertMenuSelection = 0;
+            }
+          }
+        }
     }
   }
   else if (encRightPosition < encRightOldPosition - 2) // counterclockwise, go up
@@ -1057,12 +1092,12 @@ void displayPage(uint8_t page)
       {
         if(firstGpsRead)
         {
-          updateDisplay("Reading GPS...", 16, false);
-          updateDisplay("(GPS warming up)", 24, false);
+          updateDisplay("Reading GPS...", 32, false);
+          updateDisplay("(GPS warming up)", 48, false);
         }
         else
         {
-          updateDisplay("Reading GPS...", 20, false);
+          updateDisplay("Reading GPS...", 40, false);
         }
       }
       else
@@ -1104,21 +1139,21 @@ void displayPage(uint8_t page)
         strcpy(displayText, "PM1.0:  ");
         strcat(displayText, pm1p0Text);
         strcat(displayText, " ug/m3");
-        updateDisplay(displayText, 8, false);
+        updateDisplay(displayText, 16, false);
 
         strcpy(displayText, "PM2.5:  ");
         strcat(displayText, pm2p5Text);
         strcat(displayText, " ug/m3");
-        updateDisplay(displayText, 16, false);
+        updateDisplay(displayText, 24, false);
 
         strcpy(displayText, "PM10.0: ");
         strcat(displayText, pm10p0Text);
         strcat(displayText, " ug/m3");
-        updateDisplay(displayText, 24, false);
+        updateDisplay(displayText, 32, false);
 
         if(gpsDisplayFail)
         {
-          updateDisplay("GPS read failed", 32, false);
+          updateDisplay("GPS read failed", 64, false);
         }
         else
         {
@@ -1139,7 +1174,7 @@ void displayPage(uint8_t page)
             strcat(timeText, "0");
           }
           strcat(timeText, minuteText);
-          updateDisplay(timeText, 32, false);
+          updateDisplay(timeText, 64, false);
         }
       }
       break;
