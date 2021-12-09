@@ -18,12 +18,12 @@
 // Make sure you have these five libraries installed in Documents/Arduino/libraries
 #include <Adafruit_I2CDevice.h>
 #include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
+#include <Adafruit_SSD1327.h>
 #include <Encoder.h>
 #include "SdFat.h"
 #include <TinyGPS++.h>
 #include <TimeLib.h>
-#include <RTCZero.h>
+// #include <RTCZero.h>
 #include "Seeed_BMP280.h"
 
 #define SAMP_TIME 2500 // number of ms between sensor readings
@@ -39,7 +39,7 @@
 #define OLED_RESET -1
 #define SCREEN_ADDRESS 0x3D
 #define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
+#define SCREEN_HEIGHT 128
 #define ENC_RIGHT_BUTTON 7
 #define DEBUG_PRINT
 
@@ -68,8 +68,8 @@ double altitude;
 
 time_t prevTimeStamp = 0;
 
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-Encoder encRight(5, 6);
+Adafruit_SSD1327 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+Encoder encRight(4, 5);
 Encoder encLeft(0, 1);
 
 long encRightOldPosition = 0;
@@ -120,7 +120,7 @@ void setup() {
   Wire.begin();
 
   // Initialize comms with OLED display
-  display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS);
+  display.begin(SCREEN_ADDRESS);
 
   display.clearDisplay();
   updateDisplay("Initializing...", 20, false);
@@ -948,10 +948,10 @@ void displayPage(uint8_t page)
   // On all pages add "select" and "back" indicators on the bottom of the screen
   // On data collection page, only show "back"
   display.clearDisplay();
-  display.drawLine(0, display.height()-10, display.width()-1, display.height()-10, SSD1306_WHITE);
-  display.drawLine(display.width()/2 - 1, display.height()-10, display.width()/2 - 1, display.height()-1, SSD1306_WHITE);
-  // display.drawLine((2*display.width()/3)-1, display.height()-10, (2*display.width()/3)-1, display.height()-1, SSD1306_WHITE);
-  display.setTextColor(SSD1306_WHITE);
+  display.drawLine(0, display.height()-10, display.width()-1, display.height()-10, SSD1327_WHITE);
+  display.drawLine(display.width()/2 - 1, display.height()-10, display.width()/2 - 1, display.height()-1, SSD1327_WHITE);
+  // display.drawLine((2*display.width()/3)-1, display.height()-10, (2*display.width()/3)-1, display.height()-1, SSD1327_WHITE);
+  display.setTextColor(SSD1327_WHITE);
   display.setCursor(10, display.height()-8);
   display.print("Back ");
   if(page == 2) // only the date and time page uses the left knob for left-right
@@ -984,7 +984,7 @@ void displayPage(uint8_t page)
       }
       break;
     case(1): // Time entry method menu
-      display.drawLine(0, 10, display.width()-1, 10, SSD1306_WHITE);
+      display.drawLine(0, 10, display.width()-1, 10, SSD1327_WHITE);
       updateDisplay("Time entry method?", 0, false);
       if (currentVertMenuSelection == 0) 
       {
@@ -1107,11 +1107,11 @@ void updateDisplay(char* text, uint8_t height, bool bg)
 
   if(bg) 
   {
-    display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+    display.setTextColor(SSD1327_BLACK, SSD1327_WHITE);
   }
   else
   { 
-    display.setTextColor(SSD1306_WHITE);
+    display.setTextColor(SSD1327_WHITE);
   }
   display.setCursor(0, height);
 
