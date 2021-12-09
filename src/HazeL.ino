@@ -40,7 +40,8 @@
 #define SCREEN_ADDRESS 0x3D
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 128
-#define ENC_RIGHT_BUTTON 7
+#define ENC_RIGHT_BUTTON 3
+#define ENC_LEFT_BUTTON 2
 #define DEBUG_PRINT
 
 HM3301 dustSensor;
@@ -82,6 +83,8 @@ unsigned long curMillis;
 
 volatile bool encRightButtonFlag = false;
 volatile bool encRightButtonISREn = false;
+volatile bool encLeftButtonFlag = false;
+volatile bool encLeftButtonISREn = false;
 
 bool ledFlag = false;
 uint8_t ledCount = 0;
@@ -136,6 +139,7 @@ void setup() {
   pinMode(SWITCH_PIN, INPUT_PULLUP);
   pinMode(SD_CS_PIN, OUTPUT);
   pinMode(ENC_RIGHT_BUTTON, INPUT_PULLDOWN);
+  pinMode(ENC_LEFT_BUTTON, INPUT_PULLDOWN);
 
   #ifdef DEBUG_PRINT
   Serial.println("Initialize SD");
@@ -219,9 +223,11 @@ void setup() {
 
   // Attach ISR for flipping buttonFlag when button is pressed
   attachInterrupt(digitalPinToInterrupt(ENC_RIGHT_BUTTON), encRightButtonISR, RISING);
+  attachInterrupt(digitalPinToInterrupt(ENC_LEFT_BUTTON), encLeftButtonISR, RISING);
 
   // enable button ISR
   encRightButtonISREn = true;
+  encLeftButtonISREn = true;
 
   state = 0;
 }
@@ -243,14 +249,12 @@ void loop() {
         if(currentVertMenuSelection == 0)
         {
           // state = 2; // collect data
-          prevPage = page;
           page = 1;
         }
         else if(currentVertMenuSelection == 1)
         {
           prevState = state;
           state = 3; // upload data
-          prevPage = page;
           page = 4;
         }
       }
@@ -261,13 +265,11 @@ void loop() {
           // Use GPS for time stamp
           prevState = state;
           state = 2; // collect data
-          prevPage = page;
           page = 5; 
         }
         else if(currentVertMenuSelection == 1)
         {
           // Use manual entry + RTC
-          prevPage = page;
           page = 2; // enter time stamp
         }
       }
@@ -319,6 +321,15 @@ void encRightButtonISR()
   {
     encRightButtonFlag = true;
     encRightButtonISREn = false;
+  }
+}
+
+void encLeftButtonISR()
+{
+  if(encLeftButtonISREn == true)
+  {
+    encLeftButtonFlag = true;
+    encLeftButtonISREn = false;
   }
 }
 
@@ -913,8 +924,8 @@ void updateMenuSelection()
   long encRightPosition = encRight.read();
   long encLeftPosition = encLeft.read();
   #ifdef DEBUG_PRINT
-  // Serial.print("Right encoder position: ");
-  // Serial.println(encRightPosition);
+  Serial.print("Right encoder position: ");
+  Serial.println(encRightPosition);
   #endif
   if (encRightPosition > encRightOldPosition + 2) // clockwise, go down
   {
