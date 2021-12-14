@@ -278,8 +278,13 @@ void loop() {
         else if(currentVertMenuSelection == 1)
         {
           // Use manual entry + RTC
-          page = 2; // enter time stamp
+          page = 2; // enter date
         }
+      }
+      else if (page == 2)
+      {
+        // TODO: Save time stamp here and start RTC
+        page = 3; // enter time
       }
       currentVertMenuSelection = 0; // reset menu selection before going to next page
       encRightButtonFlag = false;
@@ -1266,6 +1271,29 @@ void displayPage(uint8_t page)
       display.setTextSize(1);
       break;
     case(3): // Time entry
+      char displayHour[3];
+      char displayMinute[3];
+
+      itoa(manualHour, displayHour, 10);
+      itoa(manualMinute, displayMinute, 10);
+
+      display.setTextSize(2);
+      display.setCursor(0, 56);
+
+      if(currentHoriMenuSelection == 0) display.setTextColor(SSD1327_BLACK, SSD1327_WHITE);
+      if(manualHour < 10) display.print('0');
+      display.print(manualHour);
+
+      display.setTextColor(SSD1327_WHITE);
+      display.print(':');
+
+      if(currentHoriMenuSelection == 1) display.setTextColor(SSD1327_BLACK, SSD1327_WHITE);
+      if(manualMinute < 10) display.print('0');
+      display.print(manualMinute);
+
+      display.setTextColor(SSD1327_WHITE);
+      display.setTextSize(1);
+
       break;
     case(5): // Data collection
       if(gpsFlag) 
