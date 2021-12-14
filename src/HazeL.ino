@@ -70,7 +70,7 @@ double altitude;
 time_t prevTimeStamp = 0;
 uint8_t manualMonth = 1;
 uint8_t manualDay = 1;
-uint8_t manualYear = CUR_YEAR;
+uint16_t manualYear = CUR_YEAR;
 uint8_t manualHour = 0;
 uint8_t manualMinute = 0;
 
@@ -986,29 +986,29 @@ void updateMenuSelection()
       case 2: // entering date
         if(currentHoriMenuSelection == 0) // month
         {
-          if(currentVertMenuSelection > 12) currentVertMenuSelection = 0;
+          if(currentVertMenuSelection > 12) currentVertMenuSelection = 1;
           manualMonth = currentVertMenuSelection;
         }
         else if(currentHoriMenuSelection == 1) // day
         {
           if(currentVertMenuSelection == 3 || currentVertMenuSelection == 5 || currentVertMenuSelection == 8 || currentVertMenuSelection == 10) // April, June, September, November
           {
-            if(currentVertMenuSelection > 30) currentVertMenuSelection = 0;
+            if(currentVertMenuSelection > 30) currentVertMenuSelection = 1;
           }
           else if(currentVertMenuSelection == 0 || currentVertMenuSelection == 2 || currentVertMenuSelection == 4 || currentVertMenuSelection == 6 || currentVertMenuSelection == 7 || currentVertMenuSelection == 9 || currentVertMenuSelection == 11)
           {
             // January, March, May, July, August, October, December
-            if(currentVertMenuSelection > 31) currentVertMenuSelection = 0;
+            if(currentVertMenuSelection > 31) currentVertMenuSelection = 1;
           }
           else if(currentVertMenuSelection == 1) // February
           {
             if(manualYear % 4 == 0) 
             {
-              if(currentVertMenuSelection > 29) currentVertMenuSelection = 0;
+              if(currentVertMenuSelection > 29) currentVertMenuSelection = 1;
             }
             else
             {
-              if(currentVertMenuSelection > 28) currentVertMenuSelection = 0;
+              if(currentVertMenuSelection > 28) currentVertMenuSelection = 1;
             }
           }
           manualDay = currentVertMenuSelection;
@@ -1025,6 +1025,8 @@ void updateMenuSelection()
           }
           manualYear = currentVertMenuSelection;
         }
+        break;
+      case 3: // entering time
         break;
     }
   }
@@ -1045,17 +1047,18 @@ void updateMenuSelection()
   {
     #ifdef DEBUG_PRINT
     Serial.println("Left knob turned cw");
+    Serial.println(encLeftPosition);
     #endif
     if(page == 2 || page == 3) // date or time entry
     {
       currentHoriMenuSelection++;
       if(page == 2)
       {
-        if(currentHoriMenuSelection > 3) currentHoriMenuSelection = 3;
+        if(currentHoriMenuSelection > 2) currentHoriMenuSelection = 2;
       }
       else if(page == 3)
       {
-        if(currentHoriMenuSelection > 2) currentHoriMenuSelection = 2;
+        if(currentHoriMenuSelection > 1) currentHoriMenuSelection = 1;
       }
     }
   }
@@ -1063,6 +1066,7 @@ void updateMenuSelection()
   {
     #ifdef DEBUG_PRINT
     Serial.println("Left knob turned ccw");
+    Serial.println(encLeftPosition);
     #endif
     if(page == 2 || page == 3)
     {
@@ -1070,6 +1074,13 @@ void updateMenuSelection()
       if(currentHoriMenuSelection > 10) currentHoriMenuSelection = 0;
     }
   }
+  #ifdef DEBUG_PRINT
+  Serial.print("Current vert menu selection: ");
+  Serial.println(currentVertMenuSelection);
+  Serial.print("Current hori menu selection: ");
+  Serial.println(currentHoriMenuSelection);
+  Serial.println();
+  #endif
 }
 
 // function for displaying various pages/menus
@@ -1128,7 +1139,36 @@ void displayPage(uint8_t page)
       }
       break;
     case(2): // Date entry
-      
+      char displayMonth[3];
+      char displayDay[3];
+      char displayYear[5];
+
+      itoa(manualMonth, displayMonth, 10);
+      itoa(manualDay, displayDay, 10);
+      itoa(manualYear, displayYear, 10);
+
+      display.setTextSize(2);
+      display.setCursor(0, 56);
+
+      if(currentHoriMenuSelection == 0) display.setTextColor(SSD1327_BLACK, SSD1327_WHITE);
+      if(manualMonth < 10) display.print('0');
+      display.print(manualMonth);
+
+      display.setTextColor(SSD1327_WHITE);
+      display.print('/');
+
+      if(currentHoriMenuSelection == 1) display.setTextColor(SSD1327_BLACK, SSD1327_WHITE);
+      if(manualDay < 10) display.print('0');
+      display.print(manualDay);
+
+      display.setTextColor(SSD1327_WHITE);
+      display.print('/');
+
+      if(currentHoriMenuSelection == 2) display.setTextColor(SSD1327_BLACK, SSD1327_WHITE);
+      display.print(manualYear);
+
+      display.setTextColor(SSD1327_WHITE);
+      display.setTextSize(1);
       break;
     case(3): // Time entry
       break;
