@@ -992,38 +992,38 @@ void updateMenuSelection()
         case 2: // entering date
           if(currentHoriMenuSelection == 0) // month
           {
-            if(currentVertMenuSelection > 12) currentVertMenuSelection = 1;
-            manualMonth = currentVertMenuSelection;
+            if(currentVertMenuSelection > 11) currentVertMenuSelection = 0;
+            manualMonth = currentVertMenuSelection + 1;
           }
           else if(currentHoriMenuSelection == 1) // day
           {
-            if(currentVertMenuSelection == 3 || currentVertMenuSelection == 5 || currentVertMenuSelection == 8 || currentVertMenuSelection == 10) // April, June, September, November
+            if(manualMonth == 4 || manualMonth == 6 || manualMonth == 9 || manualMonth == 11) // April, June, September, November
             {
-              if(currentVertMenuSelection > 30) currentVertMenuSelection = 1;
+              if(currentVertMenuSelection > 29) currentVertMenuSelection = 0;
             }
-            else if(currentVertMenuSelection == 0 || currentVertMenuSelection == 2 || currentVertMenuSelection == 4 || currentVertMenuSelection == 6 || currentVertMenuSelection == 7 || currentVertMenuSelection == 9 || currentVertMenuSelection == 11)
+            else if(manualMonth == 1 || manualMonth == 3 || manualMonth == 5 || manualMonth == 7 || manualMonth == 8 || manualMonth == 10 || manualMonth == 12)
             {
               // January, March, May, July, August, October, December
-              if(currentVertMenuSelection > 31) currentVertMenuSelection = 1;
+              if(currentVertMenuSelection > 30) currentVertMenuSelection = 0;
             }
-            else if(currentVertMenuSelection == 1) // February
+            else if(manualMonth == 2) // February
             {
               if(manualYear % 4 == 0) 
               {
-                if(currentVertMenuSelection > 29) currentVertMenuSelection = 1;
+                if(currentVertMenuSelection > 28) currentVertMenuSelection = 0;
               }
               else
               {
-                if(currentVertMenuSelection > 28) currentVertMenuSelection = 1;
+                if(currentVertMenuSelection > 27) currentVertMenuSelection = 0;
               }
             }
-            manualDay = currentVertMenuSelection;
+            manualDay = currentVertMenuSelection + 1;
           }
           else if(currentHoriMenuSelection == 2) // year
           {
             if(currentVertMenuSelection > 2099) 
             {
-              currentVertMenuSelection = 0;
+              currentVertMenuSelection = CUR_YEAR;
             }
             else if(currentVertMenuSelection < CUR_YEAR)
             {
@@ -1048,10 +1048,9 @@ void updateMenuSelection()
     {
       prevMenuMillis = curMillis;
       currentVertMenuSelection--;
-      if(currentVertMenuSelection > 2) // overflow on unsigned value, will go up to 255
-      {
-        currentVertMenuSelection = 0;
-      }
+      if(currentVertMenuSelection > 60000) currentVertMenuSelection = 0; // negative overflow, set back to 0
+
+
     }
   }
 
