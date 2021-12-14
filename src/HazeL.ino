@@ -1038,6 +1038,20 @@ void updateMenuSelection()
           }
           break;
         case 3: // entering time
+          if(currentHoriMenuSelection == 0) // hour
+          {
+            if(currentVertMenuSelection > 23) currentVertMenuSelection = 0;
+            manualHour = currentVertMenuSelection;
+          }
+          else if(currentHoriMenuSelection == 1) // minute
+          {
+            if(currentVertMenuSelection > 59)
+            {
+              currentVertMenuSelection = 0;
+              manualHour++;
+            }
+            manualMinute = currentVertMenuSelection;
+          }
           break;
       }
     }
@@ -1102,6 +1116,22 @@ void updateMenuSelection()
             manualYear = currentVertMenuSelection;
           }
           break;
+        case 3: // entering time
+          if(currentHoriMenuSelection == 0) // hour
+          {
+            if(currentVertMenuSelection < 0) currentVertMenuSelection = 23;
+            manualHour = currentVertMenuSelection;
+          }
+          else if(currentHoriMenuSelection == 1) // minute
+          {
+            if(currentVertMenuSelection < 0)
+            {
+              currentVertMenuSelection = 59;
+              manualHour--;
+            }
+            manualMinute = currentVertMenuSelection;
+          }
+          break;
       }
     }
   }
@@ -1140,6 +1170,15 @@ void updateMenuSelection()
         else if(page == 3)
         {
           if(currentHoriMenuSelection > 1) currentHoriMenuSelection = 1;
+
+          if(currentHoriMenuSelection == 0) // hour
+          {
+            currentVertMenuSelection = manualHour;
+          }
+          else if(currentHoriMenuSelection == 1) // minute
+          {
+            currentVertMenuSelection = manualMinute;
+          }
         }
       }
     }
@@ -1175,6 +1214,15 @@ void updateMenuSelection()
       else if(page == 3)
       {
         if(currentHoriMenuSelection < 0) currentHoriMenuSelection = 0;
+
+        if(currentHoriMenuSelection == 0) // hour
+        {
+          currentVertMenuSelection = manualHour;
+        }
+        else if(currentHoriMenuSelection == 1) // minute
+        {
+          currentVertMenuSelection = manualMinute;
+        }
       }
     }
   }
