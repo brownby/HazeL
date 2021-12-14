@@ -286,7 +286,12 @@ void loop() {
         // TODO: Save time stamp here and start RTC
         page = 3; // enter time
       }
-      currentVertMenuSelection = 0; // reset menu selection before going to next page
+
+      // reset menus for next page
+      if(page == 2) currentVertMenuSelection = manualMonth - 1;
+      else if(page == 3) currentVertMenuSelection = manualHour;
+      else currentVertMenuSelection = 0;
+      currentHoriMenuSelection = 0;
       encRightButtonFlag = false;
       encRightButtonISREn = true;
     }
