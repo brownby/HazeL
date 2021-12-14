@@ -42,6 +42,7 @@
 #define SCREEN_HEIGHT 128
 #define ENC_RIGHT_BUTTON A1
 #define ENC_LEFT_BUTTON 7
+#define MENU_UPDATE_TIME 100 // milliseconds between menu updates
 #define DEBUG_PRINT
 
 HM3301 dustSensor;
@@ -84,6 +85,7 @@ long encLeftOldPosition = 0;
 unsigned long prevSampMillis = 0;
 unsigned long prevLedMillis = 0;
 unsigned long prevGpsMillis = 0;
+unsigned long prevMenuMillis = 0;
 unsigned long curMillis;
 
 volatile bool encRightButtonFlag = false;
@@ -114,7 +116,7 @@ uint8_t prevState = 0;
 // page = 5 data collection screen
 uint8_t page = 0;
 uint8_t prevPage = 0;
-uint8_t currentVertMenuSelection = 0;
+uint16_t currentVertMenuSelection = 0;
 uint8_t currentHoriMenuSelection = 0;
 
 void setup() {
@@ -977,57 +979,62 @@ void updateMenuSelection()
     Serial.println("Right knob turned cw");
     #endif
     encRightOldPosition = encRightPosition;
-    currentVertMenuSelection++;
-    switch (page)
+
+    if(curMillis >= prevMenuMillis + MENU_UPDATE_TIME) // only update menu selection every 100ms
     {
-      case 0: case 1: // initial two menus
-        if(currentVertMenuSelection > 1) currentVertMenuSelection = 1; // only two choices on these pages
-        break;
-      case 2: // entering date
-        if(currentHoriMenuSelection == 0) // month
-        {
-          if(currentVertMenuSelection > 12) currentVertMenuSelection = 1;
-          manualMonth = currentVertMenuSelection;
-        }
-        else if(currentHoriMenuSelection == 1) // day
-        {
-          if(currentVertMenuSelection == 3 || currentVertMenuSelection == 5 || currentVertMenuSelection == 8 || currentVertMenuSelection == 10) // April, June, September, November
+      prevMenuMillis = curMillis;
+      currentVertMenuSelection++;
+      switch (page)
+      {
+        case 0: case 1: // initial two menus
+          if(currentVertMenuSelection > 1) currentVertMenuSelection = 1; // only two choices on these pages
+          break;
+        case 2: // entering date
+          if(currentHoriMenuSelection == 0) // month
           {
-            if(currentVertMenuSelection > 30) currentVertMenuSelection = 1;
+            if(currentVertMenuSelection > 12) currentVertMenuSelection = 1;
+            manualMonth = currentVertMenuSelection;
           }
-          else if(currentVertMenuSelection == 0 || currentVertMenuSelection == 2 || currentVertMenuSelection == 4 || currentVertMenuSelection == 6 || currentVertMenuSelection == 7 || currentVertMenuSelection == 9 || currentVertMenuSelection == 11)
+          else if(currentHoriMenuSelection == 1) // day
           {
-            // January, March, May, July, August, October, December
-            if(currentVertMenuSelection > 31) currentVertMenuSelection = 1;
-          }
-          else if(currentVertMenuSelection == 1) // February
-          {
-            if(manualYear % 4 == 0) 
+            if(currentVertMenuSelection == 3 || currentVertMenuSelection == 5 || currentVertMenuSelection == 8 || currentVertMenuSelection == 10) // April, June, September, November
             {
-              if(currentVertMenuSelection > 29) currentVertMenuSelection = 1;
+              if(currentVertMenuSelection > 30) currentVertMenuSelection = 1;
             }
-            else
+            else if(currentVertMenuSelection == 0 || currentVertMenuSelection == 2 || currentVertMenuSelection == 4 || currentVertMenuSelection == 6 || currentVertMenuSelection == 7 || currentVertMenuSelection == 9 || currentVertMenuSelection == 11)
             {
-              if(currentVertMenuSelection > 28) currentVertMenuSelection = 1;
+              // January, March, May, July, August, October, December
+              if(currentVertMenuSelection > 31) currentVertMenuSelection = 1;
             }
+            else if(currentVertMenuSelection == 1) // February
+            {
+              if(manualYear % 4 == 0) 
+              {
+                if(currentVertMenuSelection > 29) currentVertMenuSelection = 1;
+              }
+              else
+              {
+                if(currentVertMenuSelection > 28) currentVertMenuSelection = 1;
+              }
+            }
+            manualDay = currentVertMenuSelection;
           }
-          manualDay = currentVertMenuSelection;
-        }
-        else if(currentHoriMenuSelection == 2) // year
-        {
-          if(currentVertMenuSelection > 2099) 
+          else if(currentHoriMenuSelection == 2) // year
           {
-            currentVertMenuSelection = 0;
+            if(currentVertMenuSelection > 2099) 
+            {
+              currentVertMenuSelection = 0;
+            }
+            else if(currentVertMenuSelection < CUR_YEAR)
+            {
+              currentVertMenuSelection = CUR_YEAR;
+            }
+            manualYear = currentVertMenuSelection;
           }
-          else if(currentVertMenuSelection < CUR_YEAR)
-          {
-            currentVertMenuSelection = CUR_YEAR;
-          }
-          manualYear = currentVertMenuSelection;
-        }
-        break;
-      case 3: // entering time
-        break;
+          break;
+        case 3: // entering time
+          break;
+      }
     }
   }
   else if (encRightPosition < encRightOldPosition - 2) // counterclockwise, go up
@@ -1036,10 +1043,15 @@ void updateMenuSelection()
     Serial.println("Right knob turned ccw");
     #endif
     encRightOldPosition = encRightPosition;
-    currentVertMenuSelection--;
-    if(currentVertMenuSelection > 2) // overflow on unsigned value, will go up to 255
+
+    if(curMillis >= prevMenuMillis + MENU_UPDATE_TIME) // only update menu selection every 100ms
     {
-      currentVertMenuSelection = 0;
+      prevMenuMillis = curMillis;
+      currentVertMenuSelection--;
+      if(currentVertMenuSelection > 2) // overflow on unsigned value, will go up to 255
+      {
+        currentVertMenuSelection = 0;
+      }
     }
   }
 
@@ -1049,16 +1061,22 @@ void updateMenuSelection()
     Serial.println("Left knob turned cw");
     Serial.println(encLeftPosition);
     #endif
-    if(page == 2 || page == 3) // date or time entry
+    encLeftOldPosition = encLeftPosition;
+
+    if(curMillis >= prevMenuMillis + MENU_UPDATE_TIME)
     {
-      currentHoriMenuSelection++;
-      if(page == 2)
+      prevMenuMillis = curMillis;
+      if(page == 2 || page == 3) // date or time entry
       {
-        if(currentHoriMenuSelection > 2) currentHoriMenuSelection = 2;
-      }
-      else if(page == 3)
-      {
-        if(currentHoriMenuSelection > 1) currentHoriMenuSelection = 1;
+        currentHoriMenuSelection++;
+        if(page == 2)
+        {
+          if(currentHoriMenuSelection > 2) currentHoriMenuSelection = 2;
+        }
+        else if(page == 3)
+        {
+          if(currentHoriMenuSelection > 1) currentHoriMenuSelection = 1;
+        }
       }
     }
   }
@@ -1068,10 +1086,15 @@ void updateMenuSelection()
     Serial.println("Left knob turned ccw");
     Serial.println(encLeftPosition);
     #endif
-    if(page == 2 || page == 3)
+    encLeftOldPosition = encLeftPosition;
+
+    if(curMillis >= prevMenuMillis + MENU_UPDATE_TIME)
     {
-      currentHoriMenuSelection--;
-      if(currentHoriMenuSelection > 10) currentHoriMenuSelection = 0;
+      if(page == 2 || page == 3)
+      {
+        currentHoriMenuSelection--;
+        if(currentHoriMenuSelection > 10) currentHoriMenuSelection = 0;
+      }
     }
   }
   #ifdef DEBUG_PRINT
