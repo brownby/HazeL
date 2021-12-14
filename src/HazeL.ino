@@ -283,8 +283,29 @@ void loop() {
       }
       else if (page == 2)
       {
-        // TODO: Save time stamp here and start RTC
         page = 3; // enter time
+      }
+      else if (page == 3)
+      {
+        // TODO: Save time stamp here and start RTC, for now just print it out
+        #ifdef DEBUG_PRINT
+        Serial.print("Timestamp set as: ");
+        Serial.print(manualMonth);
+        Serial.print('/');
+        Serial.print(manualDay);
+        Serial.print('/');
+        Serial.print(manualYear);
+        Serial.print(' ');
+        if(manualHour < 10) Serial.print('0');
+        Serial.print(manualHour);
+        Serial.print(':');
+        if(manualMinute < 10) Serial.print('0');
+        Serial.println(manualMinute);
+        #endif
+        
+        prevState = state;
+        state = 2; // collect data
+        page = 5;
       }
 
       // reset menus for next page
@@ -478,7 +499,7 @@ void updateSampleSD()
       }
 
       // make GPS reads interruptible by the button being pressed
-      if (encRightButtonFlag)
+      if (encLeftButtonFlag)
       {
         // Put GPS to sleep
         if (gpsAwake)
@@ -919,7 +940,7 @@ void readGps()
     if(gps.encode(Serial1.read()))
     {
       #ifdef DEBUG_PRINT
-      Serial.println("GPS data successfully encoded");
+      // Serial.println("GPS data successfully encoded");
       #endif
     }
   }
@@ -1063,6 +1084,10 @@ void updateMenuSelection()
           }
           break;
       }
+      #ifdef DEBUG_PRINT
+      Serial.print("Current vert menu selection: ");
+      Serial.println(currentVertMenuSelection);
+      #endif
     }
   }
   else if (encRightPosition < encRightOldPosition - 2) // counterclockwise, go up
@@ -1142,6 +1167,10 @@ void updateMenuSelection()
           }
           break;
       }
+      #ifdef DEBUG_PRINT
+      Serial.print("Current vert menu selection: ");
+      Serial.println(currentVertMenuSelection);
+      #endif
     }
   }
 
@@ -1190,6 +1219,10 @@ void updateMenuSelection()
           }
         }
       }
+      #ifdef DEBUG_PRINT
+      Serial.print("Current hori menu selection: ");
+      Serial.println(currentHoriMenuSelection);
+      #endif
     }
   }
   else if(encLeftPosition < encLeftOldPosition - 2)
@@ -1233,15 +1266,12 @@ void updateMenuSelection()
           currentVertMenuSelection = manualMinute;
         }
       }
+      #ifdef DEBUG_PRINT
+      Serial.print("Current hori menu selection: ");
+      Serial.println(currentHoriMenuSelection);
+      #endif
     }
   }
-  #ifdef DEBUG_PRINT
-  Serial.print("Current vert menu selection: ");
-  Serial.println(currentVertMenuSelection);
-  Serial.print("Current hori menu selection: ");
-  Serial.println(currentHoriMenuSelection);
-  Serial.println();
-  #endif
 }
 
 // function for displaying various pages/menus
