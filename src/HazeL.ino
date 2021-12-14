@@ -360,6 +360,10 @@ void loop() {
         state = 0;
         break;
     }
+    // reset menus for next page
+    if(page == 2) currentVertMenuSelection = manualMonth - 1;
+    else if(page == 3) currentVertMenuSelection = manualHour;
+    else currentVertMenuSelection = 0;
     encLeftButtonFlag = false;
     encLeftButtonISREn = true;
     #ifdef DEBUG_PRINT
