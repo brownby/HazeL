@@ -1097,13 +1097,6 @@ void updateMenuSelection()
           }
           break;
       }
-      if(page == 2 && currentHoriMenuSelection == 2)
-      {
-        currentVertMenuSelection = CUR_YEAR;
-      }
-      currentVertMenuSelection = 0; // negative overflow, set back to 0
-
-
     }
   }
 
