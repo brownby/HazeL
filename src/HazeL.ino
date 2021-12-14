@@ -118,6 +118,7 @@ uint8_t page = 0;
 uint8_t prevPage = 0;
 int16_t currentVertMenuSelection = 0;
 int16_t currentHoriMenuSelection = 0;
+int16_t prevHoriMenuSelection = 0;
 
 void setup() {
   // initialize Serial port
@@ -1114,9 +1115,22 @@ void updateMenuSelection()
       if(page == 2 || page == 3) // date or time entry
       {
         currentHoriMenuSelection++;
-        if(page == 2)
+        if(page == 2) // date entry
         {
           if(currentHoriMenuSelection > 2) currentHoriMenuSelection = 2;
+
+          if(currentHoriMenuSelection == 0) // month
+          {
+            currentVertMenuSelection = manualMonth - 1;
+          }
+          else if(currentHoriMenuSelection == 1) // day
+          {
+            currentVertMenuSelection = manualDay - 1;
+          }
+          else if(currentHoriMenuSelection == 2) // year
+          {
+            currentVertMenuSelection = manualYear;
+          }
         }
         else if(page == 3)
         {
@@ -1135,10 +1149,23 @@ void updateMenuSelection()
 
     if(curMillis >= prevMenuMillis + MENU_UPDATE_TIME)
     {
-      if(page == 2 || page == 3)
+      if(page == 2) // date entry
       {
         currentHoriMenuSelection--;
-        if(currentHoriMenuSelection > 10) currentHoriMenuSelection = 0;
+        if(currentHoriMenuSelection < 0) currentHoriMenuSelection = 0;
+
+        if(currentHoriMenuSelection == 0) // month
+        {
+          currentVertMenuSelection = manualMonth - 1;
+        }
+        else if(currentHoriMenuSelection == 1) // day
+        {
+          currentVertMenuSelection = manualDay - 1;
+        }
+        else if(currentHoriMenuSelection == 2) // year
+        {
+          currentVertMenuSelection = manualYear;
+        }
       }
     }
   }
