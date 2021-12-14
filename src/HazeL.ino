@@ -1154,9 +1154,9 @@ void updateMenuSelection()
 
     if(curMillis >= prevMenuMillis + MENU_UPDATE_TIME)
     {
+      currentHoriMenuSelection--;
       if(page == 2) // date entry
       {
-        currentHoriMenuSelection--;
         if(currentHoriMenuSelection < 0) currentHoriMenuSelection = 0;
 
         if(currentHoriMenuSelection == 0) // month
@@ -1171,6 +1171,10 @@ void updateMenuSelection()
         {
           currentVertMenuSelection = manualYear;
         }
+      }
+      else if(page == 3)
+      {
+        if(currentHoriMenuSelection < 0) currentHoriMenuSelection = 0;
       }
     }
   }
@@ -1195,7 +1199,7 @@ void displayPage(uint8_t page)
   display.setTextColor(SSD1327_WHITE);
   display.setCursor(10, display.height()-8);
   display.print("Back ");
-  if(page == 2) // only the date and time page uses the left knob for left-right
+  if(page == 2 || page == 3) // only the date and time page uses the left knob for left-right
   {
     display.cp437(true);
     display.print("\x11\x10");
