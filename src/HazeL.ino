@@ -116,8 +116,8 @@ uint8_t prevState = 0;
 // page = 5 data collection screen
 uint8_t page = 0;
 uint8_t prevPage = 0;
-uint16_t currentVertMenuSelection = 0;
-uint8_t currentHoriMenuSelection = 0;
+int16_t currentVertMenuSelection = 0;
+int16_t currentHoriMenuSelection = 0;
 
 void setup() {
   // initialize Serial port
@@ -997,25 +997,24 @@ void updateMenuSelection()
           }
           else if(currentHoriMenuSelection == 1) // day
           {
-            if(manualMonth == 4 || manualMonth == 6 || manualMonth == 9 || manualMonth == 11) // April, June, September, November
+            switch(manualMonth)
             {
-              if(currentVertMenuSelection > 29) currentVertMenuSelection = 0;
-            }
-            else if(manualMonth == 1 || manualMonth == 3 || manualMonth == 5 || manualMonth == 7 || manualMonth == 8 || manualMonth == 10 || manualMonth == 12)
-            {
-              // January, March, May, July, August, October, December
-              if(currentVertMenuSelection > 30) currentVertMenuSelection = 0;
-            }
-            else if(manualMonth == 2) // February
-            {
-              if(manualYear % 4 == 0) 
-              {
-                if(currentVertMenuSelection > 28) currentVertMenuSelection = 0;
-              }
-              else
-              {
-                if(currentVertMenuSelection > 27) currentVertMenuSelection = 0;
-              }
+              case 4: case 6: case 9: case 11: // Apr, Jun, Sept, Nov
+                if(currentVertMenuSelection > 29) currentVertMenuSelection = 0;
+                break;
+              case 1: case 3: case 5: case 7: case 8: case 10: case 12: // Jan, Mar, May, Jul, Aug, Oct, Dec
+                if(currentVertMenuSelection > 30) currentVertMenuSelection = 0;
+                break;
+              case 2: // February
+                if(manualYear % 4 == 0) 
+                {
+                  if(currentVertMenuSelection > 28) currentVertMenuSelection = 0;
+                }
+                else
+                {
+                  if(currentVertMenuSelection > 27) currentVertMenuSelection = 0;
+                }
+                break;
             }
             manualDay = currentVertMenuSelection + 1;
           }
@@ -1048,7 +1047,61 @@ void updateMenuSelection()
     {
       prevMenuMillis = curMillis;
       currentVertMenuSelection--;
-      if(currentVertMenuSelection > 60000) currentVertMenuSelection = 0; // negative overflow, set back to 0
+      switch(page)
+      {
+        case 0: case 1:
+          if (currentVertMenuSelection < 0) currentVertMenuSelection = 0; // stay at top of menu
+          break;
+        case 2: // entering date
+          if(currentHoriMenuSelection == 0) // entering month
+          {
+            if(currentVertMenuSelection < 0) currentVertMenuSelection = 11; // wrap around
+            manualMonth = currentVertMenuSelection + 1;
+          }
+          else if(currentHoriMenuSelection == 1) // entering day
+          {
+            if(currentVertMenuSelection < 0)
+            {
+              switch(manualMonth)
+              {
+                case 4: case 6: case 9: case 11: // April, June, September, November
+                  currentVertMenuSelection = 29;
+                  break;
+                case 1: case 3: case 5: case 7: case 8: case 10: case 12: // Jan, Mar, May, Jul, Aug, Oct, Dec
+                  currentVertMenuSelection = 30;
+                  break;
+                case 2:
+                  if(manualYear % 4 == 0) // leap year
+                  {
+                    currentVertMenuSelection = 28;
+                  }
+                  else
+                  {
+                    currentVertMenuSelection = 27;
+                  }
+              }
+            }
+            manualDay = currentVertMenuSelection + 1;
+          }
+          else if(currentHoriMenuSelection == 2) // entering year
+          {
+            if(currentVertMenuSelection > 2099)
+            {
+              currentVertMenuSelection = CUR_YEAR;
+            }
+            else if(currentVertMenuSelection < CUR_YEAR)
+            {
+              currentVertMenuSelection = CUR_YEAR;
+            }
+            manualYear = currentVertMenuSelection;
+          }
+          break;
+      }
+      if(page == 2 && currentHoriMenuSelection == 2)
+      {
+        currentVertMenuSelection = CUR_YEAR;
+      }
+      currentVertMenuSelection = 0; // negative overflow, set back to 0
 
 
     }
