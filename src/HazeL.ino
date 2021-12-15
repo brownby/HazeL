@@ -1099,6 +1099,7 @@ void updateMenuSelection()
             {
               currentVertMenuSelection = 0;
               manualHour++;
+              if(manualHour > 23) manualHour = 0;
             }
             manualMinute = currentVertMenuSelection;
           }
@@ -1187,6 +1188,7 @@ void updateMenuSelection()
             {
               currentVertMenuSelection = 59;
               manualHour--;
+              if(manualHour > 200) manualHour = 0;
             }
             manualMinute = currentVertMenuSelection;
           }
