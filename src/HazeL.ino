@@ -50,7 +50,9 @@ BMP280 TPSensor;
 
 SdFat SD;
 File dataFile;
-char dataFileName[] = "data.txt";
+File gpsFile;
+char dataFileName[23]; // YYMMDD_HHMMSS_data.txt
+char gpsFileName[22]; // YYMMDD_HHMMSS_gps.txt
 
 TinyGPSPlus gps;
 bool firstGpsRead = false;
@@ -1019,6 +1021,26 @@ char createChecksum(char* cmd)
 // Create two data files, one for GPS and one for dust data
 void createDataFiles()
 {
+  // reset current file names
+  memset(dataFileName, 0, sizeof(dataFileName));
+  memset(gpsFileName, 0, sizeof(gpsFileName));
+
+  int year;
+  int month;
+  int day;
+  int hour;
+  int minutes;
+  int seconds;
+
+  // strings to concatenate into file names
+  char yearStr[3];
+  char monthStr[3];
+  char dayStr[3];
+  char hourStr[3];
+  char minutesStr[3];
+  char secondsStr[3];
+  char baseString[15]; // YYMMDD_HHMMSS_
+
   if(!manualTimeEntry)
   {
     // get time stamp from GPS, create data files with names accordingly
@@ -1026,6 +1048,32 @@ void createDataFiles()
   else
   {
     // RTC clock should already be set, use that
+    year = rtc.getYear();
+    month = rtc.getMonth();
+    day = rtc.getDay();
+    hour = rtc.getHours();
+    minutes = rtc.getMinutes();
+    seconds = rtc.getSeconds();
+
+    itoa(year % 100, yearStr, 10);
+    itoa(month, monthStr, 10);
+    itoa(day, dayStr, 10);
+    itoa(hour, hourStr, 10);
+    itoa(minutes, minutesStr, 10);
+    itoa(seconds, secondsStr, 10);
+
+    strcat(baseString, yearStr);
+    if(month < 10) strcat(baseString, "0");
+    strcat(baseString, monthStr);
+    if(day < 10) strcat(baseString, "0");
+    strcat(baseString, dayStr);
+    if(hour < 10) strcat(baseString, "0");
+    strcat(baseString, hourStr);
+    if(minutes < 10) strcat(baseString, "0");
+    strcat(baseString, minutesStr);
+    if(seconds < 10) strcat(baseString, "0");
+    strcat(baseString, secondsStr);
+
   }
 }
 
