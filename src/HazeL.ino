@@ -23,7 +23,7 @@
 #include "SdFat.h"
 #include <TinyGPS++.h>
 #include <TimeLib.h>
-// #include <RTCZero.h>
+#include <RTCZero.h>
 #include "Seeed_BMP280.h"
 
 #define SAMP_TIME 2500 // number of ms between sensor readings
@@ -118,7 +118,6 @@ uint8_t page = 0;
 uint8_t prevPage = 0;
 int16_t currentVertMenuSelection = 0;
 int16_t currentHoriMenuSelection = 0;
-int16_t prevHoriMenuSelection = 0;
 
 void setup() {
   // initialize Serial port
