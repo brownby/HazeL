@@ -74,6 +74,7 @@ uint8_t manualDay = 1;
 uint16_t manualYear = CUR_YEAR;
 uint8_t manualHour = 0;
 uint8_t manualMinute = 0;
+bool manualTimeEntry = false; // false means use GPS
 
 Adafruit_SSD1327 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 Encoder encRight(4, 5);
@@ -227,6 +228,12 @@ void setup() {
   }
 
   TPSensor.init();
+
+  // Put GPS to sleep to start
+  if(gpsAwake)
+  {
+    toggleGps();
+  }
 
   // Attach ISR for flipping buttonFlag when button is pressed
   attachInterrupt(digitalPinToInterrupt(ENC_RIGHT_BUTTON), encRightButtonISR, RISING);
@@ -997,6 +1004,19 @@ char createChecksum(char* cmd)
   }
 
   return checksum;
+}
+
+// Create two data files, one for GPS and one for dust data
+void createDataFiles()
+{
+  if(!manualTimeEntry)
+  {
+    // get time stamp from GPS, create data files with names accordingly
+  }
+  else
+  {
+    // RTC clock should already be set, use that
+  }
 }
 
 // Update current menu selection based on encoders
