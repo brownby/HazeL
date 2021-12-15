@@ -76,6 +76,7 @@ uint8_t manualHour = 0;
 uint8_t manualMinute = 0;
 int8_t manualTimeZone = 0; // Hours behind or ahead of UTC
 bool manualTimeEntry = false; // false means use GPS
+RTCZero rtc;
 
 Adafruit_SSD1327 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 Encoder encRight(4, 5);
@@ -236,6 +237,8 @@ void setup() {
     toggleGps();
   }
 
+  rtc.begin();
+
   // Attach ISR for flipping buttonFlag when button is pressed
   attachInterrupt(digitalPinToInterrupt(ENC_RIGHT_BUTTON), encRightButtonISR, RISING);
   attachInterrupt(digitalPinToInterrupt(ENC_LEFT_BUTTON), encLeftButtonISR, RISING);
@@ -259,7 +262,7 @@ void loop() {
 
     if(encRightButtonFlag)
     {
-      if(page == 0)
+      if(page == 0) // initial menu
       {
         if(currentVertMenuSelection == 0)
         {
@@ -273,11 +276,13 @@ void loop() {
           page = 4;
         }
       }
-      else if (page == 1)
+      else if (page == 1) // time entry method
       {
         if(currentVertMenuSelection == 0)
         {
           // Use GPS for time stamp
+          manualTimeEntry = false;
+          createDataFiles();
           prevState = state;
           state = 2; // collect data
           page = 5; 
@@ -309,6 +314,10 @@ void loop() {
         if(manualMinute < 10) Serial.print('0');
         Serial.println(manualMinute);
         #endif
+
+        // set RTC
+        rtc.setDate(manualDay, manualMonth, manualYear);
+        rtc.setTime(manualHour, manualMinute, 0);
         
         prevState = state;
         state = 2; // collect data
