@@ -1188,7 +1188,7 @@ void updateMenuSelection()
             {
               currentVertMenuSelection = 59;
               manualHour--;
-              if(manualHour > 200) manualHour = 0;
+              if(manualHour > 200) manualHour = 23;
             }
             manualMinute = currentVertMenuSelection;
           }
