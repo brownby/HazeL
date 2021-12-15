@@ -74,6 +74,7 @@ uint8_t manualDay = 1;
 uint16_t manualYear = CUR_YEAR;
 uint8_t manualHour = 0;
 uint8_t manualMinute = 0;
+int8_t manualTimeZone = 0; // Hours behind or ahead of UTC
 bool manualTimeEntry = false; // false means use GPS
 
 Adafruit_SSD1327 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
@@ -1101,6 +1102,11 @@ void updateMenuSelection()
             }
             manualMinute = currentVertMenuSelection;
           }
+          else if(currentHoriMenuSelection == 2) // time zone
+          {
+            if(currentVertMenuSelection > 12) currentVertMenuSelection = 12;
+            manualTimeZone = currentVertMenuSelection;
+          }
           break;
       }
       #ifdef DEBUG_PRINT
@@ -1184,6 +1190,11 @@ void updateMenuSelection()
             }
             manualMinute = currentVertMenuSelection;
           }
+          else if(currentHoriMenuSelection == 2) // time zone
+          {
+            if(currentVertMenuSelection < -12) currentVertMenuSelection = -12;
+            manualTimeZone = currentVertMenuSelection;
+          }
           break;
       }
       #ifdef DEBUG_PRINT
@@ -1226,7 +1237,7 @@ void updateMenuSelection()
         }
         else if(page == 3)
         {
-          if(currentHoriMenuSelection > 1) currentHoriMenuSelection = 1;
+          if(currentHoriMenuSelection > 2) currentHoriMenuSelection = 2;
 
           if(currentHoriMenuSelection == 0) // hour
           {
@@ -1235,6 +1246,10 @@ void updateMenuSelection()
           else if(currentHoriMenuSelection == 1) // minute
           {
             currentVertMenuSelection = manualMinute;
+          }
+          else if(currentHoriMenuSelection == 2) // time zone
+          {
+            currentVertMenuSelection = manualTimeZone;
           }
         }
       }
@@ -1272,7 +1287,7 @@ void updateMenuSelection()
           currentVertMenuSelection = manualYear;
         }
       }
-      else if(page == 3)
+      else if(page == 3) // time entry
       {
         if(currentHoriMenuSelection < 0) currentHoriMenuSelection = 0;
 
@@ -1283,6 +1298,10 @@ void updateMenuSelection()
         else if(currentHoriMenuSelection == 1) // minute
         {
           currentVertMenuSelection = manualMinute;
+        }
+        else if(currentHoriMenuSelection == 2) // time zone
+        {
+          currentVertMenuSelection = manualTimeZone;
         }
       }
       #ifdef DEBUG_PRINT
@@ -1400,6 +1419,13 @@ void displayPage(uint8_t page)
       if(currentHoriMenuSelection == 1) display.setTextColor(SSD1327_BLACK, SSD1327_WHITE);
       if(manualMinute < 10) display.print('0');
       display.print(manualMinute);
+
+      display.setTextColor(SSD1327_WHITE);
+
+      display.print(' ');
+      if(currentHoriMenuSelection == 2) display.setTextColor(SSD1327_BLACK, SSD1327_WHITE);
+      if(manualTimeZone >= 0) display.print('+');
+      display.print(manualTimeZone);
 
       display.setTextColor(SSD1327_WHITE);
       display.setTextSize(1);
