@@ -257,7 +257,7 @@ void loop() {
 
   displayPage(page);
 
-  if(state == 0)
+  if(state == 0) // Navigating menus
   {
     updateMenuSelection();
 
@@ -1157,11 +1157,6 @@ void updateMenuSelection()
             }
             manualMinute = currentVertMenuSelection;
           }
-          else if(currentHoriMenuSelection == 2) // time zone
-          {
-            if(currentVertMenuSelection > 12) currentVertMenuSelection = 12;
-            manualTimeZone = currentVertMenuSelection;
-          }
           break;
       }
       #ifdef DEBUG_PRINT
@@ -1246,11 +1241,6 @@ void updateMenuSelection()
             }
             manualMinute = currentVertMenuSelection;
           }
-          else if(currentHoriMenuSelection == 2) // time zone
-          {
-            if(currentVertMenuSelection < -12) currentVertMenuSelection = -12;
-            manualTimeZone = currentVertMenuSelection;
-          }
           break;
       }
       #ifdef DEBUG_PRINT
@@ -1293,7 +1283,7 @@ void updateMenuSelection()
         }
         else if(page == 3)
         {
-          if(currentHoriMenuSelection > 2) currentHoriMenuSelection = 2;
+          if(currentHoriMenuSelection > 1) currentHoriMenuSelection = 1;
 
           if(currentHoriMenuSelection == 0) // hour
           {
@@ -1302,10 +1292,6 @@ void updateMenuSelection()
           else if(currentHoriMenuSelection == 1) // minute
           {
             currentVertMenuSelection = manualMinute;
-          }
-          else if(currentHoriMenuSelection == 2) // time zone
-          {
-            currentVertMenuSelection = manualTimeZone;
           }
         }
       }
@@ -1354,10 +1340,6 @@ void updateMenuSelection()
         else if(currentHoriMenuSelection == 1) // minute
         {
           currentVertMenuSelection = manualMinute;
-        }
-        else if(currentHoriMenuSelection == 2) // time zone
-        {
-          currentVertMenuSelection = manualTimeZone;
         }
       }
       #ifdef DEBUG_PRINT
@@ -1424,6 +1406,9 @@ void displayPage(uint8_t page)
       }
       break;
     case(2): // Date entry
+      display.drawLine(0, 10, display.width()-1, 10, SSD1327_WHITE);
+      updateDisplay("Enter date", 0, false);  
+
       char displayMonth[3];
       char displayDay[3];
       char displayYear[5];
@@ -1456,6 +1441,9 @@ void displayPage(uint8_t page)
       display.setTextSize(1);
       break;
     case(3): // Time entry
+      display.drawLine(0, 10, display.width()-1, 10, SSD1327_WHITE);
+      updateDisplay("Enter time (UTC)", 0, false);  
+  
       char displayHour[3];
       char displayMinute[3];
 
@@ -1475,13 +1463,6 @@ void displayPage(uint8_t page)
       if(currentHoriMenuSelection == 1) display.setTextColor(SSD1327_BLACK, SSD1327_WHITE);
       if(manualMinute < 10) display.print('0');
       display.print(manualMinute);
-
-      display.setTextColor(SSD1327_WHITE);
-
-      display.print(' ');
-      if(currentHoriMenuSelection == 2) display.setTextColor(SSD1327_BLACK, SSD1327_WHITE);
-      if(manualTimeZone >= 0) display.print('+');
-      display.print(manualTimeZone);
 
       display.setTextColor(SSD1327_WHITE);
       display.setTextSize(1);
@@ -1587,8 +1568,7 @@ void updateDisplay(char* text, uint8_t height, bool bg)
 {
   // if(clear) display.clearDisplay();
 
-  if(page == 2 || page == 3) display.setTextSize(2); // bigger for date/time entry
-  else display.setTextSize(1);
+  display.setTextSize(1);
 
   if(bg) 
   {
