@@ -106,8 +106,7 @@ bool newDataFile = false;
 uint32_t lastLinePosition = 0;
 char sd_buf[200]; // buffer to store single SD card line
 
-// state = 0 initializing
-// state = 1 navigating menu
+// state = 0 navigating menu
 // state = 2 collecting data
 // state = 3 uploading data
 uint8_t state = 0;
@@ -335,8 +334,7 @@ void loop() {
       encRightButtonISREn = true;
     }
   }
-
-  if(state == 2) // Collecting data
+  else if(state == 2) // Collecting data
   {
     // Blink LED upon successful SD write
     if(ledFlag)
@@ -360,9 +358,8 @@ void loop() {
       updateSampleSD();
     }
   }
-
   // Upload data.txt to serial monitor if buttonFlag has been set (inside buttonISR)
-  if(state == 3) // uploading data
+  else if(state == 3) // uploading data
   {
     uploadSerial();
     state = prevState;
