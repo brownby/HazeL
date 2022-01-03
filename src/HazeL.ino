@@ -262,6 +262,7 @@ void loop() {
           #endif
           File file;
           File root;
+          fileCount = 0;
           if(!root.open("/"))
           {
             #ifdef DEBUG_PRINT
@@ -312,6 +313,7 @@ void loop() {
           }
           #endif
 
+          root.close();
           // copy contents fo fileList memory location
           fileList = (char *)malloc(sizeof(filesOnSd));
           memcpy(fileList, filesOnSd, sizeof(filesOnSd));
@@ -379,7 +381,9 @@ void loop() {
     else if(page == 4)
     {
       // upload data from currently selected file
-      free(fileList); // free up memory from file list
+      // free(fileList); // free up memory from file list
+      // ^^ I think only do this when you go back from this page
+      // have uploadSerial send it back to the SD viewing page
     }
   }
   else if(state == 2) // Collecting data
@@ -437,6 +441,9 @@ void loop() {
         page = 0;
         prevState = state;
         state = 0;
+        #ifdef DEBUG_PRINT
+        Serial.println("free()'ing fileList");
+        #endif
         free(fileList); // deallocate memory for list of SD card files
         break;
       case 5: // data collection screen
@@ -1527,17 +1534,28 @@ void displayPage(uint8_t page)
     }
     case(4): // Viewing list of files on SD card
     {
-      char filesOnSd[fileCount][30];
-      memcpy(filesOnSd, fileList, sizeof(filesOnSd));
+      char allFiles[fileCount][30];
+      memcpy(allFiles, fileList, sizeof(allFiles));
 
       #ifdef DEBUG_PRINT
       Serial.println("List of files on SD found in displayPage:");
       for(int i = 0; i < fileCount; ++i)
       {
-        Serial.println(filesOnSd[i]);
+        Serial.println(allFiles[i]);
       }
       Serial.println();
       #endif
+
+      display.drawLine(0, 10, display.width()-1, 10, SSD1327_WHITE);
+      updateDisplay("Select a file", 0, false);  
+
+      for(int i = 0; i < 25; i++)
+      {
+        char num[3];
+        itoa(i, num, 10);
+        updateDisplay(num, 12 + i*8, false);
+      }
+
       break;
     }
     case(5): // Data collection
