@@ -251,9 +251,66 @@ void loop() {
           // state = 3; // upload data
           page = 4; // page for viewing SD card files
           #ifdef DEBUG_PRINT
-          Serial.println("\nSD card contents:\n");
+          Serial.println("\nSD card contents from SD.ls():");
           SD.ls(LS_R);
           Serial.println();
+          #endif
+          // First count files on SD card
+          #ifdef DEBUG_PRINT
+          Serial.println("\nCounting files on SD card");
+          #endif
+          uint32_t fileCount = 0;
+          File file;
+          File root;
+          if(!root.open("/"))
+          {
+            #ifdef DEBUG_PRINT
+            Serial.println("Error opening root");
+            #endif
+            // TODO: figure out how to handle this error
+          }
+
+          while(file.openNext(&root, O_RDONLY))
+          {
+            if(!file.isHidden())
+            {
+              fileCount++;
+              #ifdef DEBUG_PRINT
+              file.printName(&Serial);
+              Serial.print('\t');
+              Serial.println(fileCount);
+              #endif
+            }
+            file.close();
+          }
+          root.rewind();
+
+          #ifdef DEBUG_PRINT
+          Serial.print("\nFile count: ");
+          Serial.println(fileCount);
+          #endif
+
+          char filesOnSd[fileCount][30]; // Each file name should be at most 22 characters long
+          uint32_t curFile = 0;
+          while(file.openNext(&root, O_RDONLY))
+          {
+            if(!file.isHidden())
+            {
+              char fileName[30];
+              file.getName(fileName, sizeof(fileName));
+              strcpy(filesOnSd[curFile], fileName);
+              curFile++;
+            }
+            file.close();
+          }
+          root.rewind();
+
+          #ifdef DEBUG_PRINT
+          Serial.println("\nList of files created:");
+          for(int i = 0; i < fileCount; ++i)
+          {
+            Serial.println(filesOnSd[i]);
+          }
           #endif
         }
       }
@@ -1367,6 +1424,7 @@ void displayPage(uint8_t page)
   switch(page)
   {
     case(0): // Initial menu
+    {
       if (currentVertMenuSelection == 0)
       {
         updateDisplay("Start data collection\n", 0, true);
@@ -1378,7 +1436,9 @@ void displayPage(uint8_t page)
         updateDisplay("Upload data", 8, true);
       }
       break;
+    }
     case(1): // Time entry method menu
+    {
       display.drawLine(0, 10, display.width()-1, 10, SSD1327_WHITE);
       updateDisplay("Time entry method?", 0, false);
       if (currentVertMenuSelection == 0) 
@@ -1392,7 +1452,9 @@ void displayPage(uint8_t page)
         updateDisplay("Manual", 20, true);
       }
       break;
+    }
     case(2): // Date entry
+    {
       display.drawLine(0, 10, display.width()-1, 10, SSD1327_WHITE);
       updateDisplay("Enter date", 0, false);  
 
@@ -1427,7 +1489,9 @@ void displayPage(uint8_t page)
       display.setTextColor(SSD1327_WHITE);
       display.setTextSize(1);
       break;
+    }
     case(3): // Time entry
+    {
       display.drawLine(0, 10, display.width()-1, 10, SSD1327_WHITE);
       updateDisplay("Enter time (UTC)", 0, false);  
   
@@ -1455,10 +1519,13 @@ void displayPage(uint8_t page)
       display.setTextSize(1);
 
       break;
+    }
     case(4): // Viewing list of files on SD card
-
+    {
       break;
+    }
     case(5): // Data collection
+    {
       if(gpsFlag) 
       {
         if(firstGpsRead)
@@ -1549,6 +1616,7 @@ void displayPage(uint8_t page)
         }
       }
       break;
+    }
   }
   display.display();
 }
