@@ -35,7 +35,7 @@
 #define BUTTON_PIN A2 // pin for button that triggers data uploads over USB
 #define SWITCH_PIN A3 // pin for switch that sets upload mode (bulk or incremental)
 #define SD_CS_PIN 4 // CS pin of SD card, 4 on SD MKR proto shield
-#define CUR_YEAR 2021 // for GPS first fix error checking
+#define CUR_YEAR 2022 // for GPS first fix error checking
 #define OLED_RESET -1
 #define SCREEN_ADDRESS 0x3D
 #define SCREEN_WIDTH 128
@@ -81,7 +81,7 @@ bool manualTimeEntry = false; // false means use GPS
 RTCZero rtc;
 
 Adafruit_SSD1327 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-Encoder encRight(0, 1);
+Encoder encRight(1, 0);
 Encoder encLeft(4, 5);
 
 long encRightOldPosition = 0;
