@@ -53,6 +53,8 @@ File dataFile;
 File gpsFile;
 char dataFileName[23]; // YYMMDD_HHMMSS_data.txt
 char gpsFileName[22]; // YYMMDD_HHMMSS_gps.txt
+char * fileList;
+uint32_t fileCount = 0;
 
 TinyGPSPlus gps;
 bool firstGpsRead = false;
@@ -236,7 +238,7 @@ void loop() {
   {
     updateMenuSelection();
 
-    if(encRightButtonFlag)
+    if(encRightButtonFlag) // select button
     {
       if(page == 0) // initial menu
       {
@@ -245,10 +247,9 @@ void loop() {
           // state = 2; // collect data
           page = 1;
         }
-        else if(currentVertMenuSelection == 1)
+        else if(currentVertMenuSelection == 1) // upload data
         {
           prevState = state;
-          // state = 3; // upload data
           page = 4; // page for viewing SD card files
           #ifdef DEBUG_PRINT
           Serial.println("\nSD card contents from SD.ls():");
@@ -259,7 +260,6 @@ void loop() {
           #ifdef DEBUG_PRINT
           Serial.println("\nCounting files on SD card");
           #endif
-          uint32_t fileCount = 0;
           File file;
           File root;
           if(!root.open("/"))
@@ -269,7 +269,6 @@ void loop() {
             #endif
             // TODO: figure out how to handle this error
           }
-
           while(file.openNext(&root, O_RDONLY))
           {
             if(!file.isHidden())
@@ -312,6 +311,10 @@ void loop() {
             Serial.println(filesOnSd[i]);
           }
           #endif
+
+          // copy contents fo fileList memory location
+          fileList = (char *)malloc(sizeof(filesOnSd));
+          memcpy(fileList, filesOnSd, sizeof(filesOnSd));
         }
       }
       else if (page == 1) // time entry method
@@ -376,6 +379,7 @@ void loop() {
     else if(page == 4)
     {
       // upload data from currently selected file
+      free(fileList); // free up memory from file list
     }
   }
   else if(state == 2) // Collecting data
@@ -433,6 +437,7 @@ void loop() {
         page = 0;
         prevState = state;
         state = 0;
+        free(fileList); // deallocate memory for list of SD card files
         break;
       case 5: // data collection screen
         page = 1;
@@ -1522,6 +1527,17 @@ void displayPage(uint8_t page)
     }
     case(4): // Viewing list of files on SD card
     {
+      char filesOnSd[fileCount][30];
+      memcpy(filesOnSd, fileList, sizeof(filesOnSd));
+
+      #ifdef DEBUG_PRINT
+      Serial.println("List of files on SD found in displayPage:");
+      for(int i = 0; i < fileCount; ++i)
+      {
+        Serial.println(filesOnSd[i]);
+      }
+      Serial.println();
+      #endif
       break;
     }
     case(5): // Data collection
