@@ -40,8 +40,8 @@
 #define SCREEN_ADDRESS 0x3D
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 128
-#define ENC_RIGHT_BUTTON A1
-#define ENC_LEFT_BUTTON 7
+#define ENC_RIGHT_BUTTON 7
+#define ENC_LEFT_BUTTON 6
 #define MENU_UPDATE_TIME 100 // milliseconds between menu updates
 #define DEBUG_PRINT
 
@@ -81,8 +81,8 @@ bool manualTimeEntry = false; // false means use GPS
 RTCZero rtc;
 
 Adafruit_SSD1327 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-Encoder encRight(4, 5);
-Encoder encLeft(0, 1);
+Encoder encRight(0, 1);
+Encoder encLeft(4, 5);
 
 long encRightOldPosition = 0;
 long encLeftOldPosition = 0;
@@ -149,8 +149,8 @@ void setup() {
   pinMode(BUTTON_PIN, INPUT_PULLDOWN);
   pinMode(SWITCH_PIN, INPUT_PULLUP);
   pinMode(SD_CS_PIN, OUTPUT);
-  pinMode(ENC_RIGHT_BUTTON, INPUT_PULLDOWN);
-  pinMode(ENC_LEFT_BUTTON, INPUT_PULLDOWN);
+  pinMode(ENC_RIGHT_BUTTON, INPUT_PULLUP);
+  pinMode(ENC_LEFT_BUTTON, INPUT_PULLUP);
 
   #ifdef DEBUG_PRINT
   Serial.println("Initialize SD");
@@ -241,8 +241,8 @@ void setup() {
   rtc.begin();
 
   // Attach ISR for flipping buttonFlag when button is pressed
-  attachInterrupt(digitalPinToInterrupt(ENC_RIGHT_BUTTON), encRightButtonISR, RISING);
-  attachInterrupt(digitalPinToInterrupt(ENC_LEFT_BUTTON), encLeftButtonISR, RISING);
+  attachInterrupt(digitalPinToInterrupt(ENC_RIGHT_BUTTON), encRightButtonISR, FALLING);
+  attachInterrupt(digitalPinToInterrupt(ENC_LEFT_BUTTON), encLeftButtonISR, FALLING);
 
   // enable button ISR
   encRightButtonISREn = true;
