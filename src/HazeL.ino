@@ -180,6 +180,15 @@ void setup() {
     display.clearDisplay();
     updateDisplay("SD card detected", 40, false);
     display.display();
+
+    // Create 3 files for testing:
+    File test = SD.open("test1.txt", FILE_WRITE);
+    test.close();
+    test = SD.open("test2.txt", FILE_WRITE);
+    test.close();
+    test = SD.open("test3.txt", FILE_WRITE);
+    test.close();
+
   }
   delay(2500);
 
@@ -239,8 +248,13 @@ void loop() {
         else if(currentVertMenuSelection == 1)
         {
           prevState = state;
-          state = 3; // upload data
-          page = 4;
+          // state = 3; // upload data
+          page = 4; // page for viewing SD card files
+          #ifdef DEBUG_PRINT
+          Serial.println("\nSD card contents:\n");
+          SD.ls(LS_R);
+          Serial.println();
+          #endif
         }
       }
       else if (page == 1) // time entry method
@@ -286,6 +300,9 @@ void loop() {
         rtc.setDate(manualDay, manualMonth, manualYear);
         rtc.setTime(manualHour, manualMinute, 0);
         
+        manualTimeEntry = true;
+        createDataFiles();
+
         prevState = state;
         state = 2; // collect data
         page = 5;
@@ -298,6 +315,10 @@ void loop() {
       currentHoriMenuSelection = 0;
       encRightButtonFlag = false;
       encRightButtonISREn = true;
+    }
+    else if(page == 4)
+    {
+      // upload data from currently selected file
     }
   }
   else if(state == 2) // Collecting data
@@ -1334,7 +1355,7 @@ void displayPage(uint8_t page)
     display.print("\x11\x10");
     display.cp437(false);
   }
-  if (page != 4)
+  if (page != 5) // no select button on data collection screen
   {
     display.setCursor((display.width()/2) + 5, display.height()-8);
     display.cp437(true);
@@ -1432,6 +1453,9 @@ void displayPage(uint8_t page)
 
       display.setTextColor(SSD1327_WHITE);
       display.setTextSize(1);
+
+      break;
+    case(4): // Viewing list of files on SD card
 
       break;
     case(5): // Data collection
