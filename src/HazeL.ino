@@ -40,8 +40,8 @@
 #define SCREEN_ADDRESS 0x3D
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 128
-#define ENC_RIGHT_BUTTON 7
-#define ENC_LEFT_BUTTON 6
+#define ENC_RIGHT_BUTTON 8
+#define ENC_LEFT_BUTTON 7
 #define MENU_UPDATE_TIME 100 // milliseconds between menu updates
 #define DEBUG_PRINT
 
@@ -182,40 +182,6 @@ void setup() {
     display.display();
   }
   delay(2500);
-
-  char displayBuffer[25];
-  // Create data.txt file if does not exist
-  if(!SD.exists(dataFileName))
-  {
-    strcpy(displayBuffer, "Creating ");
-    strcat(displayBuffer, dataFileName);
-    display.clearDisplay();
-    updateDisplay(displayBuffer, 40, false);
-    display.display();
-    delay(2500);
-    #ifdef DEBUG_PRINT
-    Serial.print("Creating ");
-    Serial.println(dataFileName);
-    #endif
-    // newDataFile = true;
-    dataFile = SD.open(dataFileName, FILE_WRITE);
-    if(dataFile)
-    {
-      dataFile.println('x'); // mark first line with an x, will use aline with an 'x' to indicate the location of the last line read
-      dataFile.close();  
-    }
-    else
-    {
-      #ifdef DEBUG_PRINT
-      Serial.println("Couldn't open file");
-      #endif
-      display.clearDisplay();
-      updateDisplay("Unable to open file", 32, false);
-      updateDisplay("Check SD, reset device", 48, false);
-      display.display();
-    }
-
-  }
 
   // Initialize dust sensor
   if(!dustSensor.begin())
