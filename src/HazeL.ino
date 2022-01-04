@@ -59,6 +59,7 @@ char dataFileName[23]; // YYMMDD_HHMMSS_data.txt
 char gpsFileName[22]; // YYMMDD_HHMMSS_gps.txt
 char * fileList;
 uint32_t fileCount = 0;
+char fileToUpload[30];
 
 TinyGPSPlus gps;
 bool firstGpsRead = false;
@@ -397,15 +398,16 @@ void loop() {
       }
       else if(page == 4)
       {
-        // upload data from currently selected file
-        // free(fileList); // free up memory from file list
-        // ^^ I think only do this when you go back from this page
-        // have uploadSerial send it back to the SD viewing page
+        // save fileToUpload
+        memcpy(fileToUpload, fileList + currentVertMenuSelection*30, sizeof(fileToUpload));
+        prevState = state;
+        state = 3;
       }
 
       // reset menus for next page
       if(page == 2) currentVertMenuSelection = manualMonth - 1;
       else if(page == 3) currentVertMenuSelection = manualHour;
+      else if(page == 4) currentVertMenuSelection = currentVertMenuSelection;
       else currentVertMenuSelection = 0;
       currentHoriMenuSelection = 0;
       encRightButtonFlag = false;
@@ -439,9 +441,10 @@ void loop() {
   // Upload data.txt to serial monitor if buttonFlag has been set (inside buttonISR)
   else if(state == 3) // uploading data
   {
-    // uploadSerial();
+    uploadSerial(fileToUpload);
     state = prevState;
     prevState = 3;
+    page = 4;
   }
 
   if(encLeftButtonFlag) // back button
@@ -831,190 +834,44 @@ void updateSampleSD()
 }
 
 // upload SD card data over serial port
-void uploadSerial()
+void uploadSerial(char * fileName)
 {
   encRightButtonISREn = false; // disable button ISR
+  encLeftButtonISREn = false;
   uint8_t buffer[512] = {0}; // buffer to read/write data 512 bytes at a time
   uint16_t writeLen = sizeof(buffer);
-  updateDisplay("Uploading data", 16, false);
-  updateDisplay("via serial port", 24, false);
+  display.clearDisplay();
+  updateDisplay("Uploading ", 40, false);
+  updateDisplay(fileName, 48, false);
+  updateDisplay("via serial port", 56, false);
+  display.display();
   #ifdef DEBUG_PRINT
   Serial.println("Serial upload initiated");
+  Serial.print("Uploading: ");
+  Serial.println(fileName);
   #endif
   delay(2500);
+
+  File file = SD.open(fileName, FILE_READ);
+  while(file.available())
+  {
+    if (file.available() > sizeof(buffer))
+    {
+      file.read(buffer, sizeof(buffer));
+      writeLen = sizeof(buffer);
+    }
+    else
+    {
+      writeLen = file.available();  
+      file.read(buffer, file.available());
+    }
   
-  // if switch is high (to the left), upload entire file
-  if(digitalRead(SWITCH_PIN))
-  {
-    #ifdef DEBUG_PRINT
-    Serial.println("Mode 2, upload entire file");
-    #endif
-    int i = 0;
-    dataFile = SD.open(dataFileName, FILE_READ);
-    while(dataFile.available())
-    {
-      if (dataFile.available() > sizeof(buffer))
-      {
-        dataFile.read(buffer, sizeof(buffer));
-        writeLen = sizeof(buffer);
-      }
-      else
-      {
-        writeLen = dataFile.available();  
-        dataFile.read(buffer, dataFile.available());
-      }
-      
-      // look for and remove x if there
-      for (int i = 0; i < writeLen; i++)
-      {
-        if (buffer[i] == 'x')
-        {
-          // move all data back by 3 bytes
-          writeLen -= 3;
-          for (int j = i; j < writeLen; j++)
-          {
-            buffer[j] = buffer[j+3];
-          }
-          buffer[writeLen] = 0;
-          buffer[writeLen+1] = 0;
-          buffer[writeLen+2] = 0;
-        }
-      }
-      Serial.write(buffer, writeLen);
-      memset(buffer, 0, sizeof(buffer));
-    }
-    dataFile.close();
+    Serial.write(buffer, writeLen);
+    memset(buffer, 0, sizeof(buffer));
   }
-  else // if switch is low (to the right), only upload from the location in the file where last update ended
-  {
-    #ifdef DEBUG_PRINT
-    Serial.println("Mode 3, incremental upload");
-    #endif
-    bool xFound = false; // find the x, indicating last line read
-    int i = 0;
-    dataFile = SD.open(dataFileName, FILE_READ);
-    if(dataFile)
-    {
-      while(dataFile.available())
-      {
-        char c = dataFile.read();
-        
-        // first loop through to find the x
-        if(!xFound)
-        {
-          if(c == 'x')
-          {
-            xFound = true;
-            dataFile.read(); // read '\r'
-            dataFile.read(); // read '\n'
-          }
-          continue; // read next character, don't do any of the rest of this loop
-        }
-        else
-        {
-          if(c == '\n')
-          {
-            i = 0; // reset index
-            Serial.println(sd_buf); // print line to serial port
-            memset(sd_buf, 0, sizeof(sd_buf)); // reset buffer holding line to 0
-          }
-          else
-          {
-            sd_buf[i++] = c; // add character to buffer holding current line
-          }
-        }
-      }
-    }
-    else
-    {
-      #ifdef DEBUG_PRINT
-      Serial.println("Couldn't open file");
-      #endif
-    }
-    // Now remove x, add it to the end of the file  
-    dataFile.seek(0);
-    // Open temporary file
-    File tmpFile = SD.open("tmp.txt", FILE_WRITE);
-    #ifdef DEBUG_PRINT
-    unsigned long preSD = millis();
-    #endif
-    if(dataFile && tmpFile)
-    {
-      #ifdef DEBUG_PRINT
-      Serial.println("Moving data into tmp.txt");
-      #endif
-      // Move data, minus the x and following CR and NL, into tmp.txt
-      while(dataFile.available())
-      {
-        if (dataFile.available() > sizeof(buffer))
-        {
-          dataFile.read(buffer, sizeof(buffer));
-          writeLen = sizeof(buffer);
-        }
-        else
-        {
-          writeLen = dataFile.available();
-          dataFile.read(buffer, dataFile.available());
-        }
-        
-        // look for and remove x if there
-        for (int i = 0; i < writeLen; i++)
-        {
-          if (buffer[i] == 'x')
-          {
-            // move all data back by 3 bytes
-            writeLen -= 3;
-            for (int j = i; j < writeLen; j++)
-            {
-              buffer[j] = buffer[j+3];
-            }
-            buffer[writeLen] = 0;
-            buffer[writeLen+1] = 0;
-            buffer[writeLen+2] = 0;
-          }
-        }
-
-        tmpFile.write(buffer, writeLen);
-        memset(buffer, 0, sizeof(buffer));
-      }
-      #ifdef DEBUG_PRINT
-      unsigned long postSD = millis();
-      Serial.print("Moving contents of data.txt took: "); Serial.print(postSD - preSD); Serial.println(" ms");
-      Serial.println("Renaming and deleting old data file");
-      #endif
-      // Rename tmp.txt to data.txt, delete old data.txt (after renaming to datatmp.txt)
-      if (dataFile.rename("datatmp.txt"))
-      {
-        #ifdef DEBUG_PRINT
-        Serial.println("Renamed data.txt to datatmp.txt");
-        #endif
-      }
-      if (tmpFile.rename(dataFileName))
-      {
-        #ifdef DEBUG_PRINT
-        Serial.println("Renamed tmp.txt to data.txt");
-        #endif
-      }
-      dataFile.close();
-      tmpFile.close();
-      SD.remove("datatmp.txt");
-      
-      tmpFile = SD.open(dataFileName, FILE_WRITE);
-
-      #ifdef DEBUG_PRINT
-      Serial.println("Moving x to end of new data file");
-      #endif
-      tmpFile.println('x'); // an 'x' line
-      tmpFile.close();
-    }
-    else
-    {
-      #ifdef DEBUG_PRINT
-      Serial.println("Couldn't open tmp and data files");
-      #endif
-    }
-  }
+  file.close();
   encRightButtonISREn = true;
+  encLeftButtonISREn = true;
 }
 
 // blink LED
@@ -1582,6 +1439,9 @@ void displayPage(uint8_t page)
 
       char screenFiles[12][30]; // files being displayed on screen
 
+      // update current name of file to upload
+      // memcpy(fileToUpload, allFiles[currentVertMenuSelection], sizeof(fileToUpload));
+      // Serial.println(fileToUpload);
       // #ifdef DEBUG_PRINT
       // Serial.println("List of files on SD found in displayPage:");
       // for(int i = 0; i < fileCount; ++i)
