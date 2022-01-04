@@ -313,9 +313,11 @@ void loop() {
           {
             if(!file.isHidden())
             {
-              char fileName[30];
+              char fileName[30] = {0};
               file.getName(fileName, sizeof(fileName));
-              strcpy(filesOnSd[curFile], fileName);
+              char shortenedFileName[30] = {0};
+              memcpy(shortenedFileName, fileName, strlen(fileName) - 4); // everything but the file extension ".txt"
+              strcpy(filesOnSd[curFile], shortenedFileName);
               curFile++;
             }
             file.close();
@@ -526,6 +528,8 @@ void updateSampleSD()
   time_t localTime;
   time_t utcTime;
 
+  unsigned long msTimer = millis();
+
   BMP280_temp_t temp;
   BMP280_press_t press;
 
@@ -644,6 +648,8 @@ void updateSampleSD()
     
     gpsFile = SD.open(gpsFileName, FILE_WRITE);
     Serial.print("# ");
+    Serial.print(msTimer);
+    Serial.print(',');
     if(manualTimeEntry || timeoutFlag) // if manual time entry or GPS timed out, overwrite timestamp with RTC values
     {
       localYear = rtc.getYear();
@@ -670,6 +676,8 @@ void updateSampleSD()
     Serial.print(localSecond);
     Serial.print("+00:00");
 
+    gpsFile.print(msTimer);
+    gpsFile.print(',');
     gpsFile.print(localYear);
     gpsFile.print('-');
     gpsFile.print(localMonth);
@@ -741,8 +749,6 @@ void updateSampleSD()
   uint16_t count_2p5um = dustSensor.data.count_2p5um;
   uint16_t count_5p0um = dustSensor.data.count_5p0um;
   uint16_t count_10p0um = dustSensor.data.count_10p0um;
-
-  unsigned long msTimer = millis();
 
   // Display data to serial monitor and OLED display
   // Store data on SD card
@@ -840,7 +846,11 @@ void uploadSerial(char * fileName)
   #endif
   delay(2500);
 
-  File file = SD.open(fileName, FILE_READ);
+  char fileNameExtension[30];
+  strcpy(fileNameExtension, fileName);
+  strcat(fileNameExtension, ".txt");
+
+  File file = SD.open(fileNameExtension, FILE_READ);
   while(file.available())
   {
     if (file.available() > sizeof(buffer))
