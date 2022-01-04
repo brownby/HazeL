@@ -191,21 +191,22 @@ void setup() {
     display.display();
 
     // Create 25 files for testing:
-    // File test;
-    // char fileName[20];
-    // for (int i = 0; i < 25; i++)
-    // {
-    //   memset(fileName, 0, sizeof(fileName));
-    //   strcpy(fileName, "test");
-    //   char num[2];
-    //   itoa(i, num, 10);
-    //   strcat(fileName, num);
-    //   strcat(fileName, ".txt");
-    //   Serial.println(fileName);
+    File test;
+    char fileName[20];
+    for (int i = 0; i < 25; i++)
+    {
+      memset(fileName, 0, sizeof(fileName));
+      strcpy(fileName, "test");
+      char num[2];
+      itoa(i, num, 10);
+      strcat(fileName, num);
+      strcat(fileName, ".txt");
+      Serial.println(fileName);
 
-    //   test = SD.open(fileName, FILE_WRITE);
-    //   test.close();
-    // }
+      test = SD.open(fileName, FILE_WRITE);
+      test.println(fileName);
+      test.close();
+    }
   }
   delay(2500);
 
