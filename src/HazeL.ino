@@ -822,35 +822,37 @@ void uploadSerial(char * fileName)
   updateDisplay(fileName, 48, false);
   updateDisplay("via serial port", 56, false);
   display.display();
-  #ifdef DEBUG_PRINT
-  Serial.println("Serial upload initiated");
-  Serial.print("Uploading: ");
-  Serial.println(fileName);
-  #endif
-  delay(2500);
 
   char fileNameExtension[30];
   strcpy(fileNameExtension, fileName);
   strcat(fileNameExtension, ".txt");
+
+  #ifdef DEBUG_PRINT
+  Serial.println("Serial upload initiated");
+  Serial.print("Uploading: ");
+  Serial.println(fileNameExtension);
+  #endif
 
   File file = SD.open(fileNameExtension, FILE_READ);
   while(file.available())
   {
     if (file.available() > sizeof(buffer))
     {
-      file.read(buffer, sizeof(buffer));
       writeLen = sizeof(buffer);
+      file.read(buffer, sizeof(buffer));
     }
     else
     {
-      file.read(buffer, file.available());
       writeLen = file.available();  
+      file.read(buffer, file.available());
     }
   
     Serial.write(buffer, writeLen);
     memset(buffer, 0, sizeof(buffer));
   }
   file.close();
+  delay(2500);
+  
   encRightButtonISREn = true;
   encLeftButtonISREn = true;
 }
