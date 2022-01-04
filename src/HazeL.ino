@@ -40,8 +40,12 @@
 #define SCREEN_ADDRESS 0x3D
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 128
-#define ENC_RIGHT_BUTTON A2
-#define ENC_LEFT_BUTTON 7
+#define ENC_RIGHT_BUTTON A1
+#define ENC_RIGHT_A 0
+#define ENC_RIGHT_B 1
+#define ENC_LEFT_BUTTON A2
+#define ENC_LEFT_A 5
+#define ENC_LEFT_B 7
 #define MENU_UPDATE_TIME 100 // milliseconds between menu updates
 #define DEBUG_PRINT
 
@@ -83,8 +87,8 @@ bool manualTimeEntry = false; // false means use GPS
 RTCZero rtc;
 
 Adafruit_SSD1327 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-Encoder encRight(1, 0);
-Encoder encLeft(5, A1);
+Encoder encRight(ENC_RIGHT_B, ENC_RIGHT_A);
+Encoder encLeft(ENC_LEFT_B, ENC_LEFT_A);
 
 long encRightOldPosition = 0;
 long encLeftOldPosition = 0;
@@ -184,21 +188,21 @@ void setup() {
     display.display();
 
     // Create 25 files for testing:
-    // File test;
-    // char fileName[20];
-    // for (int i = 0; i < 25; i++)
-    // {
-    //   memset(fileName, 0, sizeof(fileName));
-    //   strcpy(fileName, "test");
-    //   char num[2];
-    //   itoa(i, num, 10);
-    //   strcat(fileName, num);
-    //   strcat(fileName, ".txt");
-    //   Serial.println(fileName);
+    File test;
+    char fileName[20];
+    for (int i = 0; i < 25; i++)
+    {
+      memset(fileName, 0, sizeof(fileName));
+      strcpy(fileName, "test");
+      char num[2];
+      itoa(i, num, 10);
+      strcat(fileName, num);
+      strcat(fileName, ".txt");
+      Serial.println(fileName);
 
-    //   test = SD.open(fileName, FILE_WRITE);
-    //   test.close();
-    // }
+      test = SD.open(fileName, FILE_WRITE);
+      test.close();
+    }
   }
   delay(2500);
 
