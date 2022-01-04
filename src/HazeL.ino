@@ -32,8 +32,6 @@
 #define GPS_TIMEOUT 5000 // number of ms before GPS read times out
 #define GPS_FIRST_TIMEOUT 600000 // number of ms before first GPS read times out
 #define BLINK_CNT 3 // number of times to blink LED on successful write
-#define BUTTON_PIN A2 // pin for button that triggers data uploads over USB
-#define SWITCH_PIN A3 // pin for switch that sets upload mode (bulk or incremental)
 #define SD_CS_PIN 4 // CS pin of SD card, 4 on SD MKR proto shield
 #define CUR_YEAR 2022 // for GPS first fix error checking
 #define OLED_RESET -1
@@ -57,22 +55,21 @@ File dataFile;
 File gpsFile;
 char dataFileName[23]; // YYMMDD_HHMMSS_data.txt
 char gpsFileName[22]; // YYMMDD_HHMMSS_gps.txt
-char * fileList;
-uint32_t fileCount = 0;
+char * fileList; // list of files on SD card
+uint32_t fileCount = 0; // number of files on SD card
 char fileToUpload[30];
 
 TinyGPSPlus gps;
-bool firstGpsRead = false;
 bool timestampFlag = false;
 bool gpsAwake = true;
 bool gpsDisplayFail = false;
 
-int localYear;
-int localMonth;
-int localDay;
-int localHour;
-int localMinute;
-int localSecond;
+int utcYear;
+int utcMonth;
+int utcDay;
+int utcHour;
+int utcMinute;
+int utcSecond;
 double latitude;
 double longitude;
 double altitude;
@@ -88,9 +85,9 @@ bool manualTimeEntry = false; // false means use GPS
 RTCZero rtc;
 
 Adafruit_SSD1327 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
 Encoder encRight(ENC_RIGHT_B, ENC_RIGHT_A);
 Encoder encLeft(ENC_LEFT_B, ENC_LEFT_A);
-
 long encRightOldPosition = 0;
 long encLeftOldPosition = 0;
 
@@ -107,11 +104,6 @@ volatile bool encLeftButtonISREn = false;
 
 bool ledFlag = false;
 uint8_t ledCount = 0;
-
-bool firstLineDone = false; // flag for first line (titles) having been read
-bool newDataFile = false;
-uint32_t lastLinePosition = 0;
-char sd_buf[200]; // buffer to store single SD card line
 
 // state = 0 navigating menu
 // state = 2 collecting data
@@ -155,8 +147,6 @@ void setup() {
 
   // Set relevant pin modes
   pinMode(LED_BUILTIN, OUTPUT);
-  pinMode(BUTTON_PIN, INPUT_PULLDOWN);
-  pinMode(SWITCH_PIN, INPUT_PULLUP);
   pinMode(SD_CS_PIN, OUTPUT);
   pinMode(ENC_RIGHT_BUTTON, INPUT_PULLUP);
   pinMode(ENC_LEFT_BUTTON, INPUT_PULLUP);
@@ -189,24 +179,6 @@ void setup() {
     display.clearDisplay();
     updateDisplay("SD card detected", 40, false);
     display.display();
-
-    // Create 25 files for testing:
-    File test;
-    char fileName[20];
-    for (int i = 0; i < 25; i++)
-    {
-      memset(fileName, 0, sizeof(fileName));
-      strcpy(fileName, "test");
-      char num[2];
-      itoa(i, num, 10);
-      strcat(fileName, num);
-      strcat(fileName, ".txt");
-      Serial.println(fileName);
-
-      test = SD.open(fileName, FILE_WRITE);
-      test.println(fileName);
-      test.close();
-    }
   }
   delay(2500);
 
@@ -231,6 +203,7 @@ void setup() {
     toggleGps();
   }
 
+  // Begin RTC
   rtc.begin();
 
   // Attach ISR for flipping buttonFlag when button is pressed
@@ -241,6 +214,7 @@ void setup() {
   encRightButtonISREn = true;
   encLeftButtonISREn = true;
 
+  // set initial state to menu navigation
   state = 0;
 }
 
@@ -248,31 +222,33 @@ void loop() {
   // check number of milliseconds since Arduino was turned on
   curMillis = millis();
 
+  // display the current page
   displayPage(page);
 
   if(state == 0) // Navigating menus
   {
+    // update the current menu selection
     updateMenuSelection();
 
-    if(encRightButtonFlag) // select button
+    if(encRightButtonFlag) // select button has been pressed
     {
       if(page == 0) // initial menu
       {
         if(currentVertMenuSelection == 0)
         {
-          // state = 2; // collect data
-          page = 1;
+          page = 1; // go to time entry choice page
         }
         else if(currentVertMenuSelection == 1) // upload data
         {
           prevState = state;
-          page = 4; // page for viewing SD card files
-          scroll = 0;
+          page = 4; // go to page for viewing SD card files
+          scroll = 0; // start at the beginning of the file list
           #ifdef DEBUG_PRINT
           Serial.println("\nSD card contents from SD.ls():");
           SD.ls(LS_R);
           Serial.println();
           #endif
+
           // First count files on SD card
           #ifdef DEBUG_PRINT
           Serial.println("\nCounting files on SD card");
@@ -307,6 +283,7 @@ void loop() {
           Serial.println(fileCount);
           #endif
 
+          // now create an array of file names
           char filesOnSd[fileCount][30]; // Each file name should be at most 22 characters long
           uint32_t curFile = 0;
           while(file.openNext(&root, O_RDONLY))
@@ -316,7 +293,7 @@ void loop() {
               char fileName[30] = {0};
               file.getName(fileName, sizeof(fileName));
               char shortenedFileName[30] = {0};
-              memcpy(shortenedFileName, fileName, strlen(fileName) - 4); // everything but the file extension ".txt"
+              memcpy(shortenedFileName, fileName, strlen(fileName) - 4); // everything but the file extension ".txt" (to fit on screen)
               strcpy(filesOnSd[curFile], shortenedFileName);
               curFile++;
             }
@@ -344,26 +321,23 @@ void loop() {
           #endif
 
           root.close();
+
           // copy contents fo fileList memory location
+          // free()'d when the upload menu is left with the back button
           fileList = (char *)malloc(sizeof(filesOnSd));
           memcpy(fileList, filesOnSd, sizeof(filesOnSd));
         }
       }
       else if (page == 1) // time entry method
       {
-        if(currentVertMenuSelection == 0)
+        if(currentVertMenuSelection == 0) // Use GPS for time stamp
         {
-          // Use GPS for time stamp
           manualTimeEntry = false;
-          createDataFiles();
-          // Set state and page from within createDataFiles() so that I can set it to different things on success and failure
-          // prevState = state;
-          // state = 2; // collect data
-          // page = 5; 
+          createDataFiles(); // create the names for the data and gps files for data collection
+          // State and page are set from within createDataFiles() so that I can set it to different things on success and failure
         }
-        else if(currentVertMenuSelection == 1)
+        else if(currentVertMenuSelection == 1) // Use manual entry + RTC
         {
-          // Use manual entry + RTC
           page = 2; // enter date
         }
       }
@@ -373,7 +347,6 @@ void loop() {
       }
       else if (page == 3)
       {
-        // TODO: Save time stamp here and start RTC, for now just print it out
         #ifdef DEBUG_PRINT
         Serial.print("Timestamp set as: ");
         Serial.print(manualMonth);
@@ -390,19 +363,16 @@ void loop() {
         #endif
 
         // set RTC
-        rtc.setDate(manualDay, manualMonth, manualYear % 100);
+        rtc.setDate(manualDay, manualMonth, manualYear % 100); // year is saved as an offset from 2000
         rtc.setTime(manualHour, manualMinute, 0);
         
-        manualTimeEntry = true;
+        manualTimeEntry = true; // flag to indicate that RTC is being used for time stamps, not GPS
         createDataFiles();
-
-        // prevState = state;
-        // state = 2; // collect data
-        // page = 5;
+        // State and page are set from within createDataFiles() so that I can set it to different things on success and failure
       }
       else if(page == 4)
       {
-        // save fileToUpload
+        // save fileToUpload before uploadSerial is called on it
         memcpy(fileToUpload, fileList + currentVertMenuSelection*30, sizeof(fileToUpload));
         prevState = state;
         state = 3;
@@ -411,7 +381,7 @@ void loop() {
       // reset menus for next page
       if(page == 2) currentVertMenuSelection = manualMonth - 1;
       else if(page == 3) currentVertMenuSelection = manualHour;
-      else if(page == 4) currentVertMenuSelection = currentVertMenuSelection;
+      else if(page == 4) currentVertMenuSelection = currentVertMenuSelection; // known minor bug here where upon first entering this page the cursor will be on the second selection
       else currentVertMenuSelection = 0;
       currentHoriMenuSelection = 0;
       encRightButtonFlag = false;
@@ -442,36 +412,35 @@ void loop() {
       updateSampleSD();
     }
   }
-  // Upload data.txt to serial monitor if buttonFlag has been set (inside buttonISR)
   else if(state == 3) // uploading data
   {
     uploadSerial(fileToUpload);
     state = prevState;
     prevState = 3;
-    page = 4;
+    page = 4; // go back to file list
   }
 
-  if(encLeftButtonFlag) // back button
+  if(encLeftButtonFlag) // back button has been pressed
   {
     switch(page)
     {
       case 1: // time entry choice menu
-        page = 0;
+        page = 0; // go back to initial menu
         prevState = state;
         state = 0;
         break;
       case 2: // date entry page
-        page = 1;
+        page = 1; // go back to time entry choice menu
         prevState = state;
         state = 0;
         break;
       case 3: // time entry page
-        page = 2;
+        page = 2; // go back to date entry page
         prevState = state;
         state = 0;
         break;
       case 4: // SD card file list menu
-        page = 0;
+        page = 0; // go back to initial menu
         prevState = state;
         state = 0;
         #ifdef DEBUG_PRINT
@@ -481,7 +450,7 @@ void loop() {
         scroll = 0;
         break;
       case 5: // data collection screen
-        page = 1;
+        page = 1; // go back to time entry choice menu
         prevState = state;
         state = 0;
         break;
@@ -523,9 +492,7 @@ void encLeftButtonISR()
 // update samples in SD card
 void updateSampleSD()
 {
-  bool firstFlag = false; // local version of the first GPS read flag used for timeout logic
   bool timeoutFlag = false;
-  time_t localTime;
   time_t utcTime;
 
   unsigned long msTimer = millis();
@@ -533,7 +500,7 @@ void updateSampleSD()
   BMP280_temp_t temp;
   BMP280_press_t press;
 
-  if(timestampFlag)
+  if(timestampFlag) // if it is time to get a time stamp
   {
     // read temperature and pressure
     temp = TPSensor.getTemperature();
@@ -574,7 +541,6 @@ void updateSampleSD()
           #ifdef DEBUG_PRINT 
           Serial.println("GPS timeout");
           #endif
-          // TODO: on timeout, use RTC data, and don't include lat, long, and alt
           break;
         }
 
@@ -587,6 +553,7 @@ void updateSampleSD()
           // set time for now()
           setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
 
+          // check for stale GPS timestamps
           if (now() > prevTimeStamp)
           {
             prevTimeStamp = now();
@@ -610,6 +577,7 @@ void updateSampleSD()
           {
             toggleGps();
           }
+          // TODO: test if this returns to the proper page
           return;
         }
       }
@@ -630,103 +598,115 @@ void updateSampleSD()
       if (gpsAwake)
       {
         toggleGps();
-        if (firstFlag || timeoutFlag)
+        if (timeoutFlag)
         {
           delay(500); // add extra delay after first read or timeout to make sure sleep command is properly interpreted before next read
         }
       }
 
-      // convert to local time
-      localTime = utcTime;
-      localYear = year(localTime);
-      localMonth = month(localTime);
-      localDay = day(localTime);
-      localHour = hour(localTime);
-      localMinute = minute(localTime);
-      localSecond = second(localTime);
+      // store time from GPS
+      utcYear = year(utcTime);
+      utcMonth = month(utcTime);
+      utcDay = day(utcTime);
+      utcHour = hour(utcTime);
+      utcMinute = minute(utcTime);
+      utcSecond = second(utcTime);
     }
     
-    gpsFile = SD.open(gpsFileName, FILE_WRITE);
-    Serial.print("# ");
-    Serial.print(msTimer);
-    Serial.print(',');
     if(manualTimeEntry || timeoutFlag) // if manual time entry or GPS timed out, overwrite timestamp with RTC values
     {
-      localYear = rtc.getYear();
-      localMonth = rtc.getMonth();
-      localDay = rtc.getDay();
-      localHour = rtc.getHours();
-      localMinute = rtc.getMinutes();
-      localSecond = rtc.getSeconds();
+      utcYear = rtc.getYear() + 2000; // RTC year is stored as an offset from 2000
+      utcMonth = rtc.getMonth();
+      utcDay = rtc.getDay();
+      utcHour = rtc.getHours();
+      utcMinute = rtc.getMinutes();
+      utcSecond = rtc.getSeconds();
     }
 
-    Serial.print(localYear);
-    Serial.print('-');
-    Serial.print(localMonth);
-    Serial.print('-');
-    Serial.print(localDay);
-    Serial.print('T');
-    if(localHour < 10) Serial.print('0');
-    Serial.print(localHour);
-    Serial.print(':') ;
-    if(localMinute < 10) Serial.print('0');
-    Serial.print(localMinute);
-    Serial.print(':');
-    if(localSecond < 10) Serial.print('0');
-    Serial.print(localSecond);
-    Serial.print("+00:00");
-
-    gpsFile.print(msTimer);
-    gpsFile.print(',');
-    gpsFile.print(localYear);
-    gpsFile.print('-');
-    gpsFile.print(localMonth);
-    gpsFile.print('-');
-    gpsFile.print(localDay);
-    gpsFile.print('T');
-    if(localHour < 10) gpsFile.print('0');
-    gpsFile.print(localHour);
-    gpsFile.print(':') ;
-    if(localMinute < 10) gpsFile.print('0');
-    gpsFile.print(localMinute);
-    gpsFile.print(':');
-    if(localSecond < 10) gpsFile.print('0');
-    gpsFile.print(localSecond);
-    gpsFile.print("+00:00");
-
-    // do not report lat, long, alt
-    if(manualTimeEntry || timeoutFlag)
+    gpsFile = SD.open(gpsFileName, FILE_WRITE);
+    if(gpsFile)
     {
-      Serial.print(",,,");
-      gpsFile.print(",,,");
+      Serial.print("# ");
+      Serial.print(msTimer);
+      Serial.print(',');
+      Serial.print(utcYear);
+      Serial.print('-');
+      Serial.print(utcMonth);
+      Serial.print('-');
+      Serial.print(utcDay);
+      Serial.print('T');
+      if(utcHour < 10) Serial.print('0');
+      Serial.print(utcHour);
+      Serial.print(':') ;
+      if(utcMinute < 10) Serial.print('0');
+      Serial.print(utcMinute);
+      Serial.print(':');
+      if(utcSecond < 10) Serial.print('0');
+      Serial.print(utcSecond);
+      Serial.print("+00:00");
+
+      gpsFile.print(msTimer);
+      gpsFile.print(',');
+      gpsFile.print(utcYear);
+      gpsFile.print('-');
+      gpsFile.print(utcMonth);
+      gpsFile.print('-');
+      gpsFile.print(utcDay);
+      gpsFile.print('T');
+      if(utcHour < 10) gpsFile.print('0');
+      gpsFile.print(utcHour);
+      gpsFile.print(':') ;
+      if(utcMinute < 10) gpsFile.print('0');
+      gpsFile.print(utcMinute);
+      gpsFile.print(':');
+      if(utcSecond < 10) gpsFile.print('0');
+      gpsFile.print(utcSecond);
+      gpsFile.print("+00:00");
+
+      // do not report lat, long, alt
+      if(manualTimeEntry || timeoutFlag)
+      {
+        Serial.print(",,,");
+        gpsFile.print(",,,");
+      }
+      else
+      {
+        Serial.print(',');
+        Serial.print(latitude);
+        Serial.print(',');
+        Serial.print(longitude);
+        Serial.print(',');
+        Serial.print(altitude);
+
+        gpsFile.print(',');
+        gpsFile.print(latitude);
+        gpsFile.print(',');
+        gpsFile.print(longitude);
+        gpsFile.print(',');
+        gpsFile.print(altitude);
+      }
+
+      Serial.print(',');
+      Serial.print(temp.integral); Serial.print('.'); Serial.print(temp.fractional);
+      Serial.print(',');
+      Serial.print(press.integral); Serial.print('.'); Serial.println(press.fractional);
+
+      gpsFile.print(',');
+      gpsFile.print(temp.integral); gpsFile.print('.'); gpsFile.print(temp.fractional);
+      gpsFile.print(',');
+      gpsFile.print(press.integral); gpsFile.print('.'); gpsFile.print(press.fractional);
+      gpsFile.print('\n');
     }
     else
     {
-      Serial.print(',');
-      Serial.print(latitude);
-      Serial.print(',');
-      Serial.print(longitude);
-      Serial.print(',');
-      Serial.print(altitude);
-
-      gpsFile.print(',');
-      gpsFile.print(latitude);
-      gpsFile.print(',');
-      gpsFile.print(longitude);
-      gpsFile.print(',');
-      gpsFile.print(altitude);
+      #ifdef DEBUG_PRINT
+      Serial.println("Couldn't open gps file");
+      #endif
+      display.clearDisplay();
+      updateDisplay("Couldn't open GPS file", 40, false);
+      display.display();
+      delay(500);
     }
-
-    Serial.print(',');
-    Serial.print(temp.integral); Serial.print('.'); Serial.print(temp.fractional);
-    Serial.print(',');
-    Serial.print(press.integral); Serial.print('.'); Serial.println(press.fractional);
-
-    gpsFile.print(',');
-    gpsFile.print(temp.integral); gpsFile.print('.'); gpsFile.print(temp.fractional);
-    gpsFile.print(',');
-    gpsFile.print(press.integral); gpsFile.print('.'); gpsFile.print(press.fractional);
-    gpsFile.print('\n');
   }
   
   // Read dust sensor
@@ -817,7 +797,10 @@ void updateSampleSD()
     #ifdef DEBUG_PRINT
     Serial.println("Couldn't open file");
     #endif
-    updateDisplay("Couldn't open file", 20, false);
+    display.clearDisplay();
+    updateDisplay("Couldn't open data file", 40, false);
+    display.display();
+    delay(500);
   }
 
   if(timestampFlag)
@@ -860,8 +843,8 @@ void uploadSerial(char * fileName)
     }
     else
     {
-      writeLen = file.available();  
       file.read(buffer, file.available());
+      writeLen = file.available();  
     }
   
     Serial.write(buffer, writeLen);
@@ -1036,6 +1019,11 @@ void createDataFiles()
         {
           toggleGps();
         }
+        page = 1; // go back to time entry choice menu
+        prevState = state;
+        state = 0;
+        encLeftButtonFlag = false;
+        encLeftButtonISREn = true;
         return;
       }
     }
@@ -1597,11 +1585,11 @@ void displayPage(uint8_t page)
       itoa(PM2p5_atm, pm2p5Text, 10);
       itoa(PM10p0_atm, pm10p0Text, 10);
 
-      itoa(localHour, hourText, 10);
-      itoa(localMinute, minuteText, 10);
-      itoa(localMonth, monthText, 10);
-      itoa(localDay, dayText, 10);
-      itoa(localYear, yearText, 10);
+      itoa(utcHour, hourText, 10);
+      itoa(utcMinute, minuteText, 10);
+      itoa(utcMonth, monthText, 10);
+      itoa(utcDay, dayText, 10);
+      itoa(utcYear, yearText, 10);
 
       strcpy(displayText, "PM1.0:  ");
       strcat(displayText, pm1p0Text);
@@ -1624,13 +1612,13 @@ void displayPage(uint8_t page)
       strcat(timeText, "/");
       strcat(timeText, yearText);
       strcat(timeText, " ");
-      if(localHour < 10)
+      if(utcHour < 10)
       {
         strcat(timeText, "0");
       }
       strcat(timeText, hourText);
       strcat(timeText, ":");
-      if(localMinute < 10)
+      if(utcMinute < 10)
       {
         strcat(timeText, "0");
       }
@@ -1688,6 +1676,10 @@ char status_buf[20]; // buffer for status text
 uint8_t colPositions[17] = {0}; // array to store indices of commas in sd_buf, indicating column delineations
 unsigned long prevFileSize = 0; // last recorded file size
 unsigned long bytesLeft = 0; // bytes left in file to update to ThingSpeak
+
+bool firstLineDone = false; // flag for first line (titles) having been read
+uint32_t lastLinePosition = 0;
+char sd_buf[200]; // buffer to store single SD card line
 
 // updates to ThingSpeak in bulk updates of 5kB of data
 void updateThingSpeak()
