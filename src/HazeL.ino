@@ -1606,17 +1606,17 @@ void displayPage(uint8_t page)
       strcpy(displayText, "PM1.0:  ");
       strcat(displayText, pm1p0Text);
       strcat(displayText, " ug/m3");
-      updateDisplay(displayText, 16, false);
+      updateDisplay(displayText, 24, false);
 
       strcpy(displayText, "PM2.5:  ");
       strcat(displayText, pm2p5Text);
       strcat(displayText, " ug/m3");
-      updateDisplay(displayText, 24, false);
+      updateDisplay(displayText, 32, false);
 
       strcpy(displayText, "PM10.0: ");
       strcat(displayText, pm10p0Text);
       strcat(displayText, " ug/m3");
-      updateDisplay(displayText, 32, false);
+      updateDisplay(displayText, 40, false);
 
       strcpy(timeText, monthText);
       strcat(timeText, "/");
@@ -1636,7 +1636,7 @@ void displayPage(uint8_t page)
       }
       strcat(timeText, minuteText);
       if(gpsDisplayFail || manualTimeEntry) strcat(timeText, " (RTC)");
-      updateDisplay(timeText, 64, false);
+      updateDisplay(timeText, 72, false);
       break;
     }
   }
