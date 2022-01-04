@@ -40,7 +40,7 @@
 #define SCREEN_ADDRESS 0x3D
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 128
-#define ENC_RIGHT_BUTTON 8
+#define ENC_RIGHT_BUTTON A2
 #define ENC_LEFT_BUTTON 7
 #define MENU_UPDATE_TIME 100 // milliseconds between menu updates
 #define DEBUG_PRINT
@@ -84,7 +84,7 @@ RTCZero rtc;
 
 Adafruit_SSD1327 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 Encoder encRight(1, 0);
-Encoder encLeft(4, 5);
+Encoder encLeft(5, A1);
 
 long encRightOldPosition = 0;
 long encLeftOldPosition = 0;
@@ -183,14 +183,22 @@ void setup() {
     updateDisplay("SD card detected", 40, false);
     display.display();
 
-    // Create 3 files for testing:
-    File test = SD.open("test1.txt", FILE_WRITE);
-    test.close();
-    test = SD.open("test2.txt", FILE_WRITE);
-    test.close();
-    test = SD.open("test3.txt", FILE_WRITE);
-    test.close();
+    // Create 25 files for testing:
+    // File test;
+    // char fileName[20];
+    // for (int i = 0; i < 25; i++)
+    // {
+    //   memset(fileName, 0, sizeof(fileName));
+    //   strcpy(fileName, "test");
+    //   char num[2];
+    //   itoa(i, num, 10);
+    //   strcat(fileName, num);
+    //   strcat(fileName, ".txt");
+    //   Serial.println(fileName);
 
+    //   test = SD.open(fileName, FILE_WRITE);
+    //   test.close();
+    // }
   }
   delay(2500);
 
@@ -369,6 +377,13 @@ void loop() {
         state = 2; // collect data
         page = 5;
       }
+      else if(page == 4)
+      {
+        // upload data from currently selected file
+        // free(fileList); // free up memory from file list
+        // ^^ I think only do this when you go back from this page
+        // have uploadSerial send it back to the SD viewing page
+      }
 
       // reset menus for next page
       if(page == 2) currentVertMenuSelection = manualMonth - 1;
@@ -377,13 +392,6 @@ void loop() {
       currentHoriMenuSelection = 0;
       encRightButtonFlag = false;
       encRightButtonISREn = true;
-    }
-    else if(page == 4)
-    {
-      // upload data from currently selected file
-      // free(fileList); // free up memory from file list
-      // ^^ I think only do this when you go back from this page
-      // have uploadSerial send it back to the SD viewing page
     }
   }
   else if(state == 2) // Collecting data
@@ -413,7 +421,7 @@ void loop() {
   // Upload data.txt to serial monitor if buttonFlag has been set (inside buttonISR)
   else if(state == 3) // uploading data
   {
-    uploadSerial();
+    // uploadSerial();
     state = prevState;
     prevState = 3;
   }
@@ -1214,6 +1222,9 @@ void updateMenuSelection()
             manualMinute = currentVertMenuSelection;
           }
           break;
+        case 4: // selecting file from SD card
+          if(currentVertMenuSelection > fileCount - 1) currentVertMenuSelection = fileCount - 1;
+          break;
       }
       #ifdef DEBUG_PRINT
       Serial.print("Current vert menu selection: ");
@@ -1234,7 +1245,7 @@ void updateMenuSelection()
       currentVertMenuSelection--;
       switch(page)
       {
-        case 0: case 1:
+        case 0: case 1: case 4:
           if (currentVertMenuSelection < 0) currentVertMenuSelection = 0; // stay at top of menu
           break;
         case 2: // entering date
@@ -1537,23 +1548,27 @@ void displayPage(uint8_t page)
       char allFiles[fileCount][30];
       memcpy(allFiles, fileList, sizeof(allFiles));
 
-      #ifdef DEBUG_PRINT
-      Serial.println("List of files on SD found in displayPage:");
-      for(int i = 0; i < fileCount; ++i)
-      {
-        Serial.println(allFiles[i]);
-      }
-      Serial.println();
-      #endif
+      char screenFiles[12][30]; // files being displayed on screen
+
+      // #ifdef DEBUG_PRINT
+      // Serial.println("List of files on SD found in displayPage:");
+      // for(int i = 0; i < fileCount; ++i)
+      // {
+      //   Serial.println(allFiles[i]);
+      // }
+      // Serial.println();
+      // #endif
 
       display.drawLine(0, 10, display.width()-1, 10, SSD1327_WHITE);
       updateDisplay("Select a file", 0, false);  
 
-      for(int i = 0; i < 25; i++)
+      if(fileCount < 12)
       {
-        char num[3];
-        itoa(i, num, 10);
-        updateDisplay(num, 12 + i*8, false);
+        for(uint32_t i = 0; i < fileCount; i++)
+        {
+          if(currentVertMenuSelection == i) updateDisplay(allFiles[i], 12 + i*8, true);
+          else updateDisplay(allFiles[i], 12 + i*8, false);
+        }
       }
 
       break;
