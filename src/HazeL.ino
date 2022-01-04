@@ -128,6 +128,8 @@ uint8_t page = 0;
 uint8_t prevPage = 0;
 int16_t currentVertMenuSelection = 0;
 int16_t currentHoriMenuSelection = 0;
+int16_t prevVertMenuSelection = 0;
+uint8_t scroll = 0; // count number of times SD page has been scrolled
 
 void setup() {
   // initialize Serial port
@@ -188,21 +190,21 @@ void setup() {
     display.display();
 
     // Create 25 files for testing:
-    File test;
-    char fileName[20];
-    for (int i = 0; i < 25; i++)
-    {
-      memset(fileName, 0, sizeof(fileName));
-      strcpy(fileName, "test");
-      char num[2];
-      itoa(i, num, 10);
-      strcat(fileName, num);
-      strcat(fileName, ".txt");
-      Serial.println(fileName);
+    // File test;
+    // char fileName[20];
+    // for (int i = 0; i < 25; i++)
+    // {
+    //   memset(fileName, 0, sizeof(fileName));
+    //   strcpy(fileName, "test");
+    //   char num[2];
+    //   itoa(i, num, 10);
+    //   strcat(fileName, num);
+    //   strcat(fileName, ".txt");
+    //   Serial.println(fileName);
 
-      test = SD.open(fileName, FILE_WRITE);
-      test.close();
-    }
+    //   test = SD.open(fileName, FILE_WRITE);
+    //   test.close();
+    // }
   }
   delay(2500);
 
@@ -263,6 +265,7 @@ void loop() {
         {
           prevState = state;
           page = 4; // page for viewing SD card files
+          scroll = 0;
           #ifdef DEBUG_PRINT
           Serial.println("\nSD card contents from SD.ls():");
           SD.ls(LS_R);
@@ -457,6 +460,7 @@ void loop() {
         Serial.println("free()'ing fileList");
         #endif
         free(fileList); // deallocate memory for list of SD card files
+        scroll = 0;
         break;
       case 5: // data collection screen
         page = 1;
@@ -1161,6 +1165,7 @@ void updateMenuSelection()
     if(curMillis >= prevMenuMillis + MENU_UPDATE_TIME) // only update menu selection every 100ms
     {
       prevMenuMillis = curMillis;
+      prevVertMenuSelection = currentVertMenuSelection;
       currentVertMenuSelection++;
       switch (page)
       {
@@ -1228,6 +1233,10 @@ void updateMenuSelection()
           break;
         case 4: // selecting file from SD card
           if(currentVertMenuSelection > fileCount - 1) currentVertMenuSelection = fileCount - 1;
+          if(currentVertMenuSelection % 12 == 0 && currentVertMenuSelection != 0 && currentVertMenuSelection != prevVertMenuSelection)
+          {
+            scroll++;
+          }
           break;
       }
       #ifdef DEBUG_PRINT
@@ -1246,10 +1255,11 @@ void updateMenuSelection()
     if(curMillis >= prevMenuMillis + MENU_UPDATE_TIME) // only update menu selection every 100ms
     {
       prevMenuMillis = curMillis;
+      prevVertMenuSelection = currentVertMenuSelection;
       currentVertMenuSelection--;
       switch(page)
       {
-        case 0: case 1: case 4:
+        case 0: case 1:
           if (currentVertMenuSelection < 0) currentVertMenuSelection = 0; // stay at top of menu
           break;
         case 2: // entering date
@@ -1313,6 +1323,13 @@ void updateMenuSelection()
             manualMinute = currentVertMenuSelection;
           }
           break;
+        case 4:
+          if (currentVertMenuSelection < 0) currentVertMenuSelection = 0; // stay at top of menu
+          if(currentVertMenuSelection % 12 == 11)
+          {
+            scroll--;
+            if(scroll < 0) scroll = 0;
+          }
       }
       #ifdef DEBUG_PRINT
       Serial.print("Current vert menu selection: ");
@@ -1566,15 +1583,34 @@ void displayPage(uint8_t page)
       display.drawLine(0, 10, display.width()-1, 10, SSD1327_WHITE);
       updateDisplay("Select a file", 0, false);  
 
-      if(fileCount < 12)
+      uint8_t numFilesToDisplay = 0;
+
+      // copy next 12 names from allFiles into screenFiles, or fewer if there are fewer than 12 left
+      if(fileCount - scroll*12 >= 12)
       {
-        for(uint32_t i = 0; i < fileCount; i++)
-        {
-          if(currentVertMenuSelection == i) updateDisplay(allFiles[i], 12 + i*8, true);
-          else updateDisplay(allFiles[i], 12 + i*8, false);
-        }
+        memcpy(screenFiles, allFiles[scroll*12], sizeof(screenFiles));
+        numFilesToDisplay = 12;
+      }
+      else if(fileCount - scroll*12 < 12)
+      {
+        numFilesToDisplay = fileCount - scroll*12;
+        memcpy(screenFiles, allFiles[scroll*12], numFilesToDisplay*30); // 30 bytes per file name
       }
 
+      for(uint8_t i = 0; i < numFilesToDisplay; i++)
+      {
+        if(scroll == 0)
+        {
+          if(currentVertMenuSelection == i) updateDisplay(screenFiles[i], 12 + i*8, true);
+          else updateDisplay(screenFiles[i], 12 + i*8, false);
+        }
+        else
+        {
+          if(currentVertMenuSelection == i + 12*scroll) updateDisplay(screenFiles[i], 12 + i*8, true);
+          else updateDisplay(screenFiles[i], 12 + i*8, false);
+        }          
+        
+      }
       break;
     }
     case(5): // Data collection
