@@ -388,15 +388,15 @@ void loop() {
         #endif
 
         // set RTC
-        rtc.setDate(manualDay, manualMonth, manualYear);
+        rtc.setDate(manualDay, manualMonth, manualYear % 100);
         rtc.setTime(manualHour, manualMinute, 0);
         
         manualTimeEntry = true;
         createDataFiles();
 
-        prevState = state;
-        state = 2; // collect data
-        page = 5;
+        // prevState = state;
+        // state = 2; // collect data
+        // page = 5;
       }
       else if(page == 4)
       {
@@ -749,7 +749,7 @@ void updateSampleSD()
   dataFile = SD.open(dataFileName, FILE_WRITE);
   if(dataFile)
   {
-    // Display time stamp and data in the serial monitor
+    // Display data in the serial monitor
     
     Serial.print(msTimer);
     Serial.print(',');
@@ -1039,14 +1039,28 @@ void createDataFiles()
   minutes = rtc.getMinutes();
   seconds = rtc.getSeconds();
 
-  itoa(year % 100, yearStr, 10);
+  itoa(year, yearStr, 10);
   itoa(month, monthStr, 10);
   itoa(day, dayStr, 10);
   itoa(hour, hourStr, 10);
   itoa(minutes, minutesStr, 10);
   itoa(seconds, secondsStr, 10);
 
-  strcat(baseString, yearStr);
+  #ifdef DEBUG_PRINT
+  Serial.print(monthStr);
+  Serial.print('/');
+  Serial.print(dayStr);
+  Serial.print('/');
+  Serial.print(yearStr);
+  Serial.print(' ');
+  Serial.print(hourStr);
+  Serial.print(':');
+  Serial.print(minutesStr);
+  Serial.print(':');
+  Serial.println(secondsStr);
+  #endif
+
+  strcpy(baseString, yearStr);
   if(month < 10) strcat(baseString, "0");
   strcat(baseString, monthStr);
   if(day < 10) strcat(baseString, "0");
@@ -1063,6 +1077,12 @@ void createDataFiles()
   strcat(dataFileName, "data.txt");
   strcat(gpsFileName, "gps.txt");
 
+  #ifdef DEBUG_PRINT
+  Serial.print("dataFileName: ");
+  Serial.println(dataFileName);
+  Serial.print("gpsFileName: ");
+  Serial.println(gpsFileName);
+  #endif
   // collect data and go to data collection screen
   prevState = state;
   state = 2;
@@ -1587,31 +1607,25 @@ void displayPage(uint8_t page)
       strcat(displayText, " ug/m3");
       updateDisplay(displayText, 32, false);
 
-      if(gpsDisplayFail)
+      strcpy(timeText, monthText);
+      strcat(timeText, "/");
+      strcat(timeText, dayText);
+      strcat(timeText, "/");
+      strcat(timeText, yearText);
+      strcat(timeText, " ");
+      if(localHour < 10)
       {
-        updateDisplay("GPS read failed", 64, false);
+        strcat(timeText, "0");
       }
-      else
+      strcat(timeText, hourText);
+      strcat(timeText, ":");
+      if(localMinute < 10)
       {
-        strcpy(timeText, monthText);
-        strcat(timeText, "/");
-        strcat(timeText, dayText);
-        strcat(timeText, "/");
-        strcat(timeText, yearText);
-        strcat(timeText, " ");
-        if(localHour < 10)
-        {
-          strcat(timeText, "0");
-        }
-        strcat(timeText, hourText);
-        strcat(timeText, ":");
-        if(localMinute < 10)
-        {
-          strcat(timeText, "0");
-        }
-        strcat(timeText, minuteText);
-        updateDisplay(timeText, 64, false);
+        strcat(timeText, "0");
       }
+      strcat(timeText, minuteText);
+      if(gpsDisplayFail || manualTimeEntry) strcat(timeText, " (RTC)");
+      updateDisplay(timeText, 64, false);
       break;
     }
   }
