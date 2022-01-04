@@ -63,7 +63,7 @@ char fileToUpload[30];
 
 TinyGPSPlus gps;
 bool firstGpsRead = false;
-bool gpsFlag = false;
+bool timestampFlag = false;
 bool gpsAwake = true;
 bool gpsDisplayFail = false;
 
@@ -354,9 +354,10 @@ void loop() {
           // Use GPS for time stamp
           manualTimeEntry = false;
           createDataFiles();
-          prevState = state;
-          state = 2; // collect data
-          page = 5; 
+          // Set state and page from within createDataFiles() so that I can set it to different things on success and failure
+          // prevState = state;
+          // state = 2; // collect data
+          // page = 5; 
         }
         else if(currentVertMenuSelection == 1)
         {
@@ -433,7 +434,7 @@ void loop() {
       prevSampMillis = curMillis;
       if(curMillis - prevGpsMillis >= GPS_TIME)
       {
-        gpsFlag = true;
+        timestampFlag = true;
         prevGpsMillis = curMillis;
       }
       updateSampleSD();
@@ -528,126 +529,196 @@ void updateSampleSD()
   BMP280_temp_t temp;
   BMP280_press_t press;
 
-  if(gpsFlag)
+  if(timestampFlag)
   {
-    displayPage(page);
-
-    if(firstGpsRead)
-    {
-      firstFlag = true;
-    }
-
-    // // wake up GPS module
-    if (!gpsAwake)
-    {
-      toggleGps();
-    }
-    unsigned long gpsReadCurMillis;
-    unsigned long gpsReadStartMillis = millis();
-    unsigned long gpsTimeoutMillis;
-    if (firstFlag)
-    {
-      gpsTimeoutMillis = GPS_FIRST_TIMEOUT;
-    }
-    else
-    {
-      gpsTimeoutMillis = GPS_TIMEOUT;
-    }
-    #ifdef DEBUG_PRINT
-    unsigned long preRead = millis();
-    #endif
-
-    // Read GPS data until it's valid
-    // 10 minute timeout for first GPS read
-    // 5 second timeout for further reads
-    while (true)
-    {
-      gpsReadCurMillis = millis();
-
-      readGps();
-
-      if (gpsReadCurMillis - gpsReadStartMillis >= gpsTimeoutMillis)
-      {
-        timeoutFlag = true;
-        gpsDisplayFail = true;
-        #ifdef DEBUG_PRINT 
-        Serial.println("GPS timeout");
-        #endif
-        break;
-      }
-
-      if (gps.date.isValid() && gps.time.isValid() && gps.location.isValid() && gps.altitude.isValid() && gps.date.year() == CUR_YEAR)
-      {
-        #ifdef DEBUG_PRINT
-        Serial.println("GPS data valid");
-        #endif
-
-        // set time for now()
-        setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
-
-        if (now() > prevTimeStamp)
-        {
-          prevTimeStamp = now();
-          gpsDisplayFail = false;
-          break;
-        }
-        #ifdef DEBUG_PRINT
-        else
-        {
-          Serial.println("Stale timestamp, continuing GPS read");
-        }
-        #endif
-      
-      }
-
-      // make GPS reads interruptible by the button being pressed
-      if (encLeftButtonFlag)
-      {
-        // Put GPS to sleep
-        if (gpsAwake)
-        {
-          toggleGps();
-        }
-        return;
-      }
-    }
-    
-    #ifdef DEBUG_PRINT
-    unsigned long postRead = millis();
-    Serial.print("GPS read took: "); Serial.print(postRead - preRead); Serial.println(" ms");
-    #endif
-
-    // store UTC time
-    utcTime = now();
-
-    latitude = gps.location.lat();
-    longitude = gps.location.lng();
-    altitude = gps.altitude.meters();
-
-    // put GPS to sleep
-    if (gpsAwake)
-    {
-      toggleGps();
-      if (firstFlag || timeoutFlag)
-      {
-        delay(500); // add extra delay after first read or timeout to make sure sleep command is properly interpreted before next read
-      }
-    }
-
-    // convert to local time
-    localTime = utcTime;
-    localYear = year(localTime);
-    localMonth = month(localTime);
-    localDay = day(localTime);
-    localHour = hour(localTime);
-    localMinute = minute(localTime);
-    localSecond = second(localTime);
-
     // read temperature and pressure
     temp = TPSensor.getTemperature();
     press = TPSensor.getPressure();
 
-    if (firstGpsRead) {firstGpsRead = false;}
+    // If you chose to use GPS, keep getting time, lat, long, and alt fom GPS
+    if(!manualTimeEntry)
+    {
+      display.clearDisplay();
+      updateDisplay("Reading GPS...", 40, false);
+      display.display();
+
+      // wake up GPS module
+      if (!gpsAwake)
+      {
+        toggleGps();
+      }
+      unsigned long gpsReadCurMillis;
+      unsigned long gpsReadStartMillis = millis();
+      unsigned long gpsTimeoutMillis = GPS_TIMEOUT;
+
+      #ifdef DEBUG_PRINT
+      unsigned long preRead = millis();
+      #endif
+
+      // Read GPS data until it's valid
+      // 5 second timeout
+      while (true)
+      {
+        gpsReadCurMillis = millis();
+
+        readGps();
+
+        if (gpsReadCurMillis - gpsReadStartMillis >= gpsTimeoutMillis)
+        {
+          timeoutFlag = true;
+          gpsDisplayFail = true;
+          #ifdef DEBUG_PRINT 
+          Serial.println("GPS timeout");
+          #endif
+          // TODO: on timeout, use RTC data, and don't include lat, long, and alt
+          break;
+        }
+
+        if (gps.date.isValid() && gps.time.isValid() && gps.location.isValid() && gps.altitude.isValid() && gps.date.year() == CUR_YEAR)
+        {
+          #ifdef DEBUG_PRINT
+          Serial.println("GPS data valid");
+          #endif
+
+          // set time for now()
+          setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
+
+          if (now() > prevTimeStamp)
+          {
+            prevTimeStamp = now();
+            gpsDisplayFail = false;
+            break;
+          }
+          #ifdef DEBUG_PRINT
+          else
+          {
+            Serial.println("Stale timestamp, continuing GPS read");
+          }
+          #endif
+        
+        }
+
+        // make GPS reads interruptible by the button being pressed
+        if (encLeftButtonFlag)
+        {
+          // Put GPS to sleep
+          if (gpsAwake)
+          {
+            toggleGps();
+          }
+          return;
+        }
+      }
+      
+      #ifdef DEBUG_PRINT
+      unsigned long postRead = millis();
+      Serial.print("GPS read took: "); Serial.print(postRead - preRead); Serial.println(" ms");
+      #endif
+
+      // store UTC time
+      utcTime = now();
+
+      latitude = gps.location.lat();
+      longitude = gps.location.lng();
+      altitude = gps.altitude.meters();
+
+      // put GPS to sleep
+      if (gpsAwake)
+      {
+        toggleGps();
+        if (firstFlag || timeoutFlag)
+        {
+          delay(500); // add extra delay after first read or timeout to make sure sleep command is properly interpreted before next read
+        }
+      }
+
+      // convert to local time
+      localTime = utcTime;
+      localYear = year(localTime);
+      localMonth = month(localTime);
+      localDay = day(localTime);
+      localHour = hour(localTime);
+      localMinute = minute(localTime);
+      localSecond = second(localTime);
+    }
+    
+    gpsFile = SD.open(gpsFileName, FILE_WRITE);
+    Serial.print("# ");
+    if(manualTimeEntry || timeoutFlag) // if manual time entry or GPS timed out, overwrite timestamp with RTC values
+    {
+      localYear = rtc.getYear();
+      localMonth = rtc.getMonth();
+      localDay = rtc.getDay();
+      localHour = rtc.getHours();
+      localMinute = rtc.getMinutes();
+      localSecond = rtc.getSeconds();
+    }
+
+    Serial.print(localYear);
+    Serial.print('-');
+    Serial.print(localMonth);
+    Serial.print('-');
+    Serial.print(localDay);
+    Serial.print('T');
+    if(localHour < 10) Serial.print('0');
+    Serial.print(localHour);
+    Serial.print(':') ;
+    if(localMinute < 10) Serial.print('0');
+    Serial.print(localMinute);
+    Serial.print(':');
+    if(localSecond < 10) Serial.print('0');
+    Serial.print(localSecond);
+    Serial.print("+00:00");
+
+    gpsFile.print(localYear);
+    gpsFile.print('-');
+    gpsFile.print(localMonth);
+    gpsFile.print('-');
+    gpsFile.print(localDay);
+    gpsFile.print('T');
+    if(localHour < 10) gpsFile.print('0');
+    gpsFile.print(localHour);
+    gpsFile.print(':') ;
+    if(localMinute < 10) gpsFile.print('0');
+    gpsFile.print(localMinute);
+    gpsFile.print(':');
+    if(localSecond < 10) gpsFile.print('0');
+    gpsFile.print(localSecond);
+    gpsFile.print("+00:00");
+
+    // do not report lat, long, alt
+    if(manualTimeEntry || timeoutFlag)
+    {
+      Serial.print(",,,");
+      gpsFile.print(",,,");
+    }
+    else
+    {
+      Serial.print(',');
+      Serial.print(latitude);
+      Serial.print(',');
+      Serial.print(longitude);
+      Serial.print(',');
+      Serial.print(altitude);
+
+      gpsFile.print(',');
+      gpsFile.print(latitude);
+      gpsFile.print(',');
+      gpsFile.print(longitude);
+      gpsFile.print(',');
+      gpsFile.print(altitude);
+    }
+
+    Serial.print(',');
+    Serial.print(temp.integral); Serial.print('.'); Serial.print(temp.fractional);
+    Serial.print(',');
+    Serial.print(press.integral); Serial.print('.'); Serial.println(press.fractional);
+
+    gpsFile.print(',');
+    gpsFile.print(temp.integral); gpsFile.print('.'); gpsFile.print(temp.fractional);
+    gpsFile.print(',');
+    gpsFile.print(press.integral); gpsFile.print('.'); gpsFile.print(press.fractional);
+    gpsFile.print('\n');
   }
   
   // Read dust sensor
@@ -679,48 +750,6 @@ void updateSampleSD()
   if(dataFile)
   {
     // Display time stamp and data in the serial monitor
-
-    // Print out timestamp and temperature when gpsFlag is set
-    if(gpsFlag)
-    {
-      Serial.print("# ");
-      Serial.print(msTimer);
-      Serial.print(',');
-
-      if (timeoutFlag)
-      {
-        Serial.print("GPS read failed");
-      }
-      else
-      {
-        Serial.print(localYear);
-        Serial.print('-');
-        Serial.print(localMonth);
-        Serial.print('-');
-        Serial.print(localDay);
-        Serial.print('T');
-        if(localHour < 10) Serial.print('0');
-        Serial.print(localHour);
-        Serial.print(':') ;
-        if(localMinute < 10) Serial.print('0');
-        Serial.print(localMinute);
-        Serial.print(':');
-        if(localSecond < 10) Serial.print('0');
-        Serial.print(localSecond);
-        Serial.print("+00:00");
-
-        Serial.print(',');
-        Serial.print(latitude, 5);
-        Serial.print(',');
-        Serial.print(longitude, 5);
-        Serial.print(',');
-        Serial.print(altitude, 2);
-      }
-      Serial.print(',');
-      Serial.print(temp.integral); Serial.print('.'); Serial.print(temp.fractional);
-      Serial.print(',');
-      Serial.print(press.integral); Serial.print('.'); Serial.println(press.fractional);
-    }
     
     Serial.print(msTimer);
     Serial.print(',');
@@ -747,48 +776,6 @@ void updateSampleSD()
     Serial.print(count_5p0um);
     Serial.print(',');
     Serial.println(count_10p0um);
-
-  if(gpsFlag)
-  {
-    dataFile.print("# ");
-    dataFile.print(msTimer);
-    dataFile.print(',');
-
-    if (timeoutFlag)
-    {
-      dataFile.print("GPS read failed");
-    }
-    else
-    {
-      dataFile.print(localYear);
-      dataFile.print('-');
-      dataFile.print(localMonth);
-      dataFile.print('-');
-      dataFile.print(localDay);
-      dataFile.print('T');
-      if(localHour < 10) dataFile.print('0');
-      dataFile.print(localHour);
-      dataFile.print(':') ;
-      if(localMinute < 10) dataFile.print('0');
-      dataFile.print(localMinute);
-      dataFile.print(':');
-      if(localSecond < 10) dataFile.print('0');
-      dataFile.print(localSecond);
-      dataFile.print("+00:00");
-
-      dataFile.print(',');
-      dataFile.print(latitude, 5);
-      dataFile.print(',');
-      dataFile.print(longitude, 5);
-      dataFile.print(',');
-      dataFile.print(altitude, 2);
-    }
-
-    dataFile.print(',');
-    dataFile.print(temp.integral); dataFile.print('.'); dataFile.print(temp.fractional);
-    dataFile.print(',');
-    dataFile.print(press.integral); dataFile.print('.'); dataFile.println(press.fractional);
-  }
 
     dataFile.print(msTimer);
     dataFile.print(',');
@@ -827,9 +814,9 @@ void updateSampleSD()
     updateDisplay("Couldn't open file", 20, false);
   }
 
-  if(gpsFlag)
+  if(timestampFlag)
   {
-    gpsFlag = false;
+    timestampFlag = false;
   }
 
 }
@@ -981,38 +968,105 @@ void createDataFiles()
 
   if(!manualTimeEntry)
   {
-    // get time stamp from GPS, create data files with names accordingly
+    // get time stamp from GPS, set RTC
+    unsigned long gpsReadCurMillis;
+    unsigned long gpsReadStartMillis = millis();
+    unsigned long gpsTimeoutMillis = GPS_FIRST_TIMEOUT;
+
+    while (true)
+    {
+      gpsReadCurMillis = millis();
+      display.clearDisplay();
+      updateDisplay("Reading GPS...", 40, false);
+      display.display();
+
+      readGps();
+
+      if (gpsReadCurMillis - gpsReadStartMillis >= gpsTimeoutMillis)
+      {
+        // timeoutFlag = true;
+        gpsDisplayFail = true;
+        #ifdef DEBUG_PRINT 
+        Serial.println("GPS timeout");
+        #endif
+        display.clearDisplay();
+        updateDisplay("GPS read failed", 40, false);
+        updateDisplay("Please enter time", 48, false);
+        updateDisplay("manually", 56, false);
+        display.display();
+        prevState = state;
+        state = 0;
+        page = 1;
+        delay(2500);
+        return;
+      }
+
+      if (gps.date.isValid() && gps.time.isValid() && gps.location.isValid() && gps.altitude.isValid() && gps.date.year() == CUR_YEAR)
+      {
+        #ifdef DEBUG_PRINT
+        Serial.println("GPS data valid");
+        #endif
+
+        // GPS data is valid, set RTC
+        rtc.setDay(gps.date.day());
+        rtc.setMonth(gps.date.month());
+        rtc.setYear(gps.date.year());
+        rtc.setHours(gps.time.hour());
+        rtc.setMinutes(gps.time.minute());
+        rtc.setSeconds(gps.time.second());
+        break;
+      
+      }
+
+      // make GPS reads interruptible by the button being pressed
+      if (encLeftButtonFlag)
+      {
+        // Put GPS to sleep
+        if (gpsAwake)
+        {
+          toggleGps();
+        }
+        return;
+      }
+    }
+
   }
-  else
-  {
-    // RTC clock should already be set, use that
-    year = rtc.getYear();
-    month = rtc.getMonth();
-    day = rtc.getDay();
-    hour = rtc.getHours();
-    minutes = rtc.getMinutes();
-    seconds = rtc.getSeconds();
+  // RTC clock should be set (whether manually or with GPS)
+  year = rtc.getYear();
+  month = rtc.getMonth();
+  day = rtc.getDay();
+  hour = rtc.getHours();
+  minutes = rtc.getMinutes();
+  seconds = rtc.getSeconds();
 
-    itoa(year % 100, yearStr, 10);
-    itoa(month, monthStr, 10);
-    itoa(day, dayStr, 10);
-    itoa(hour, hourStr, 10);
-    itoa(minutes, minutesStr, 10);
-    itoa(seconds, secondsStr, 10);
+  itoa(year % 100, yearStr, 10);
+  itoa(month, monthStr, 10);
+  itoa(day, dayStr, 10);
+  itoa(hour, hourStr, 10);
+  itoa(minutes, minutesStr, 10);
+  itoa(seconds, secondsStr, 10);
 
-    strcat(baseString, yearStr);
-    if(month < 10) strcat(baseString, "0");
-    strcat(baseString, monthStr);
-    if(day < 10) strcat(baseString, "0");
-    strcat(baseString, dayStr);
-    if(hour < 10) strcat(baseString, "0");
-    strcat(baseString, hourStr);
-    if(minutes < 10) strcat(baseString, "0");
-    strcat(baseString, minutesStr);
-    if(seconds < 10) strcat(baseString, "0");
-    strcat(baseString, secondsStr);
+  strcat(baseString, yearStr);
+  if(month < 10) strcat(baseString, "0");
+  strcat(baseString, monthStr);
+  if(day < 10) strcat(baseString, "0");
+  strcat(baseString, dayStr);
+  if(hour < 10) strcat(baseString, "0");
+  strcat(baseString, hourStr);
+  if(minutes < 10) strcat(baseString, "0");
+  strcat(baseString, minutesStr);
+  if(seconds < 10) strcat(baseString, "0");
+  strcat(baseString, secondsStr);
 
-  }
+  strcpy(dataFileName, baseString);
+  strcpy(gpsFileName, baseString);
+  strcat(dataFileName, "data.txt");
+  strcat(gpsFileName, "gps.txt");
+
+  // collect data and go to data collection screen
+  prevState = state;
+  state = 2;
+  page = 5;
 }
 
 // Update current menu selection based on encoders
@@ -1440,9 +1494,6 @@ void displayPage(uint8_t page)
 
       char screenFiles[12][30]; // files being displayed on screen
 
-      // update current name of file to upload
-      // memcpy(fileToUpload, allFiles[currentVertMenuSelection], sizeof(fileToUpload));
-      // Serial.println(fileToUpload);
       // #ifdef DEBUG_PRINT
       // Serial.println("List of files on SD found in displayPage:");
       // for(int i = 0; i < fileCount; ++i)
@@ -1487,94 +1538,79 @@ void displayPage(uint8_t page)
     }
     case(5): // Data collection
     {
-      if(gpsFlag) 
+      uint16_t PM1p0_std = dustSensor.data.PM1p0_std;
+      uint16_t PM2p5_std = dustSensor.data.PM2p5_std;
+      uint16_t PM10p0_std = dustSensor.data.PM10p0_std;
+      uint16_t PM1p0_atm = dustSensor.data.PM1p0_atm;
+      uint16_t PM2p5_atm = dustSensor.data.PM2p5_atm;
+      uint16_t PM10p0_atm = dustSensor.data.PM10p0_atm;
+      uint16_t count_0p3um = dustSensor.data.count_0p3um;
+      uint16_t count_0p5um = dustSensor.data.count_0p5um;
+      uint16_t count_1p0um = dustSensor.data.count_1p0um;
+      uint16_t count_2p5um = dustSensor.data.count_2p5um;
+      uint16_t count_5p0um = dustSensor.data.count_5p0um;
+      uint16_t count_10p0um = dustSensor.data.count_10p0um;
+
+      char displayText[50];
+      char timeText[50];
+      char pm1p0Text[10];
+      char pm2p5Text[10];
+      char pm10p0Text[10];
+      char hourText[10];
+      char minuteText[10];
+      char monthText[10];
+      char dayText[10];
+      char yearText[10];
+
+      itoa(PM1p0_atm, pm1p0Text, 10);
+      itoa(PM2p5_atm, pm2p5Text, 10);
+      itoa(PM10p0_atm, pm10p0Text, 10);
+
+      itoa(localHour, hourText, 10);
+      itoa(localMinute, minuteText, 10);
+      itoa(localMonth, monthText, 10);
+      itoa(localDay, dayText, 10);
+      itoa(localYear, yearText, 10);
+
+      strcpy(displayText, "PM1.0:  ");
+      strcat(displayText, pm1p0Text);
+      strcat(displayText, " ug/m3");
+      updateDisplay(displayText, 16, false);
+
+      strcpy(displayText, "PM2.5:  ");
+      strcat(displayText, pm2p5Text);
+      strcat(displayText, " ug/m3");
+      updateDisplay(displayText, 24, false);
+
+      strcpy(displayText, "PM10.0: ");
+      strcat(displayText, pm10p0Text);
+      strcat(displayText, " ug/m3");
+      updateDisplay(displayText, 32, false);
+
+      if(gpsDisplayFail)
       {
-        if(firstGpsRead)
-        {
-          updateDisplay("Reading GPS...", 32, false);
-          updateDisplay("(GPS warming up)", 48, false);
-        }
-        else
-        {
-          updateDisplay("Reading GPS...", 40, false);
-        }
+        updateDisplay("GPS read failed", 64, false);
       }
       else
       {
-        uint16_t PM1p0_std = dustSensor.data.PM1p0_std;
-        uint16_t PM2p5_std = dustSensor.data.PM2p5_std;
-        uint16_t PM10p0_std = dustSensor.data.PM10p0_std;
-        uint16_t PM1p0_atm = dustSensor.data.PM1p0_atm;
-        uint16_t PM2p5_atm = dustSensor.data.PM2p5_atm;
-        uint16_t PM10p0_atm = dustSensor.data.PM10p0_atm;
-        uint16_t count_0p3um = dustSensor.data.count_0p3um;
-        uint16_t count_0p5um = dustSensor.data.count_0p5um;
-        uint16_t count_1p0um = dustSensor.data.count_1p0um;
-        uint16_t count_2p5um = dustSensor.data.count_2p5um;
-        uint16_t count_5p0um = dustSensor.data.count_5p0um;
-        uint16_t count_10p0um = dustSensor.data.count_10p0um;
-
-        char displayText[50];
-        char timeText[50];
-        char pm1p0Text[10];
-        char pm2p5Text[10];
-        char pm10p0Text[10];
-        char hourText[10];
-        char minuteText[10];
-        char monthText[10];
-        char dayText[10];
-        char yearText[10];
-
-        itoa(PM1p0_atm, pm1p0Text, 10);
-        itoa(PM2p5_atm, pm2p5Text, 10);
-        itoa(PM10p0_atm, pm10p0Text, 10);
-
-        itoa(localHour, hourText, 10);
-        itoa(localMinute, minuteText, 10);
-        itoa(localMonth, monthText, 10);
-        itoa(localDay, dayText, 10);
-        itoa(localYear, yearText, 10);
-
-        strcpy(displayText, "PM1.0:  ");
-        strcat(displayText, pm1p0Text);
-        strcat(displayText, " ug/m3");
-        updateDisplay(displayText, 16, false);
-
-        strcpy(displayText, "PM2.5:  ");
-        strcat(displayText, pm2p5Text);
-        strcat(displayText, " ug/m3");
-        updateDisplay(displayText, 24, false);
-
-        strcpy(displayText, "PM10.0: ");
-        strcat(displayText, pm10p0Text);
-        strcat(displayText, " ug/m3");
-        updateDisplay(displayText, 32, false);
-
-        if(gpsDisplayFail)
+        strcpy(timeText, monthText);
+        strcat(timeText, "/");
+        strcat(timeText, dayText);
+        strcat(timeText, "/");
+        strcat(timeText, yearText);
+        strcat(timeText, " ");
+        if(localHour < 10)
         {
-          updateDisplay("GPS read failed", 64, false);
+          strcat(timeText, "0");
         }
-        else
+        strcat(timeText, hourText);
+        strcat(timeText, ":");
+        if(localMinute < 10)
         {
-          strcpy(timeText, monthText);
-          strcat(timeText, "/");
-          strcat(timeText, dayText);
-          strcat(timeText, "/");
-          strcat(timeText, yearText);
-          strcat(timeText, " ");
-          if(localHour < 10)
-          {
-            strcat(timeText, "0");
-          }
-          strcat(timeText, hourText);
-          strcat(timeText, ":");
-          if(localMinute < 10)
-          {
-            strcat(timeText, "0");
-          }
-          strcat(timeText, minuteText);
-          updateDisplay(timeText, 64, false);
+          strcat(timeText, "0");
         }
+        strcat(timeText, minuteText);
+        updateDisplay(timeText, 64, false);
       }
       break;
     }
