@@ -1065,6 +1065,7 @@ void createDataFiles()
   strcat(baseString, monthStr);
   if(day < 10) strcat(baseString, "0");
   strcat(baseString, dayStr);
+  strcat(baseString, "_");
   if(hour < 10) strcat(baseString, "0");
   strcat(baseString, hourStr);
   if(minutes < 10) strcat(baseString, "0");
@@ -1074,8 +1075,8 @@ void createDataFiles()
 
   strcpy(dataFileName, baseString);
   strcpy(gpsFileName, baseString);
-  strcat(dataFileName, "data.txt");
-  strcat(gpsFileName, "gps.txt");
+  strcat(dataFileName, "_data.txt");
+  strcat(gpsFileName, "_gps.txt");
 
   #ifdef DEBUG_PRINT
   Serial.print("dataFileName: ");
