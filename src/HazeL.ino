@@ -321,6 +321,17 @@ void loop() {
           root.rewind();
 
           #ifdef DEBUG_PRINT
+          Serial.println("\nList of files created (pre-sort):");
+          for(int i = 0; i < fileCount; ++i)
+          {
+            Serial.println(filesOnSd[i]);
+          }
+          #endif
+
+          // Sort filesOnSd alphabetically
+          qsort(filesOnSd, fileCount, 30, cmpstr);
+
+          #ifdef DEBUG_PRINT
           Serial.println("\nList of files created:");
           for(int i = 0; i < fileCount; ++i)
           {
@@ -1731,6 +1742,14 @@ void updateDisplay(char* text, uint8_t height, bool bg)
 
   // if(send) display.display();
 
+}
+
+int cmpstr(void const *a, void const *b)
+{
+  char const *aa = (char const *)a;
+  char const *bb = (char const *)b;
+
+  return strcmp(aa, bb);
 }
 
 /*
