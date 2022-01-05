@@ -95,6 +95,7 @@ unsigned long prevSampMillis = 0;
 unsigned long prevLedMillis = 0;
 unsigned long prevGpsMillis = 0;
 unsigned long prevMenuMillis = 0;
+unsigned long dataStartMillis = 0; // millis() when data collection began
 unsigned long curMillis;
 
 volatile bool encRightButtonFlag = false;
@@ -104,6 +105,8 @@ volatile bool encLeftButtonISREn = false;
 
 bool ledFlag = false;
 uint8_t ledCount = 0;
+
+bool firstMeasurementFlag = false;
 
 // state = 0 navigating menu
 // state = 2 collecting data
@@ -495,7 +498,18 @@ void updateSampleSD()
   bool timeoutFlag = false;
   time_t utcTime;
 
-  unsigned long msTimer = millis();
+  unsigned long msTimer;
+
+  if(firstMeasurementFlag)
+  {
+    firstMeasurementFlag = false;
+    msTimer = 0;
+    dataStartMillis = millis();
+  }
+  else
+  {
+    msTimer = millis() - dataStartMillis;
+  }
 
   BMP280_temp_t temp;
   BMP280_press_t press;
@@ -1119,6 +1133,7 @@ void createDataFiles()
   prevState = state;
   state = 2;
   page = 5;
+  firstMeasurementFlag = true;
 }
 
 // Update current menu selection based on encoders
