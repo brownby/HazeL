@@ -52,9 +52,9 @@ BMP280 TPSensor;
 
 SdFat SD;
 File dataFile;
-File gpsFile;
+File metaFile;
 char dataFileName[23]; // YYMMDD_HHMMSS_data.txt
-char gpsFileName[22]; // YYMMDD_HHMMSS_gps.txt
+char metaFileName[23]; // YYMMDD_HHMMSS_meta.txt
 char * fileList; // list of files on SD card
 uint32_t fileCount = 0; // number of files on SD card
 char fileToUpload[30];
@@ -623,8 +623,8 @@ void updateSampleSD()
       utcSecond = rtc.getSeconds();
     }
 
-    gpsFile = SD.open(gpsFileName, FILE_WRITE);
-    if(gpsFile)
+    metaFile = SD.open(metaFileName, FILE_WRITE);
+    if(metaFile)
     {
       Serial.print("# ");
       Serial.print(msTimer);
@@ -645,29 +645,29 @@ void updateSampleSD()
       Serial.print(utcSecond);
       Serial.print("+00:00");
 
-      gpsFile.print(msTimer);
-      gpsFile.print(',');
-      gpsFile.print(utcYear);
-      gpsFile.print('-');
-      gpsFile.print(utcMonth);
-      gpsFile.print('-');
-      gpsFile.print(utcDay);
-      gpsFile.print('T');
-      if(utcHour < 10) gpsFile.print('0');
-      gpsFile.print(utcHour);
-      gpsFile.print(':') ;
-      if(utcMinute < 10) gpsFile.print('0');
-      gpsFile.print(utcMinute);
-      gpsFile.print(':');
-      if(utcSecond < 10) gpsFile.print('0');
-      gpsFile.print(utcSecond);
-      gpsFile.print("+00:00");
+      metaFile.print(msTimer);
+      metaFile.print(',');
+      metaFile.print(utcYear);
+      metaFile.print('-');
+      metaFile.print(utcMonth);
+      metaFile.print('-');
+      metaFile.print(utcDay);
+      metaFile.print('T');
+      if(utcHour < 10) metaFile.print('0');
+      metaFile.print(utcHour);
+      metaFile.print(':') ;
+      if(utcMinute < 10) metaFile.print('0');
+      metaFile.print(utcMinute);
+      metaFile.print(':');
+      if(utcSecond < 10) metaFile.print('0');
+      metaFile.print(utcSecond);
+      metaFile.print("+00:00");
 
       // do not report lat, long, alt
       if(manualTimeEntry || timeoutFlag)
       {
         Serial.print(",,,");
-        gpsFile.print(",,,");
+        metaFile.print(",,,");
       }
       else
       {
@@ -678,12 +678,12 @@ void updateSampleSD()
         Serial.print(',');
         Serial.print(altitude);
 
-        gpsFile.print(',');
-        gpsFile.print(latitude);
-        gpsFile.print(',');
-        gpsFile.print(longitude);
-        gpsFile.print(',');
-        gpsFile.print(altitude);
+        metaFile.print(',');
+        metaFile.print(latitude);
+        metaFile.print(',');
+        metaFile.print(longitude);
+        metaFile.print(',');
+        metaFile.print(altitude);
       }
 
       Serial.print(',');
@@ -691,11 +691,11 @@ void updateSampleSD()
       Serial.print(',');
       Serial.print(press.integral); Serial.print('.'); Serial.println(press.fractional);
 
-      gpsFile.print(',');
-      gpsFile.print(temp.integral); gpsFile.print('.'); gpsFile.print(temp.fractional);
-      gpsFile.print(',');
-      gpsFile.print(press.integral); gpsFile.print('.'); gpsFile.print(press.fractional);
-      gpsFile.print('\n');
+      metaFile.print(',');
+      metaFile.print(temp.integral); metaFile.print('.'); metaFile.print(temp.fractional);
+      metaFile.print(',');
+      metaFile.print(press.integral); metaFile.print('.'); metaFile.print(press.fractional);
+      metaFile.print('\n');
     }
     else
     {
@@ -943,7 +943,7 @@ void createDataFiles()
 {
   // reset current file names
   memset(dataFileName, 0, sizeof(dataFileName));
-  memset(gpsFileName, 0, sizeof(gpsFileName));
+  memset(metaFileName, 0, sizeof(metaFileName));
 
   int year;
   int month;
@@ -1086,15 +1086,15 @@ void createDataFiles()
   strcat(baseString, secondsStr);
 
   strcpy(dataFileName, baseString);
-  strcpy(gpsFileName, baseString);
+  strcpy(metaFileName, baseString);
   strcat(dataFileName, "_data.txt");
-  strcat(gpsFileName, "_gps.txt");
+  strcat(metaFileName, "_meta.txt");
 
   #ifdef DEBUG_PRINT
   Serial.print("dataFileName: ");
   Serial.println(dataFileName);
-  Serial.print("gpsFileName: ");
-  Serial.println(gpsFileName);
+  Serial.print("metaFileName: ");
+  Serial.println(metaFileName);
   #endif
   // collect data and go to data collection screen
   prevState = state;
