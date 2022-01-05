@@ -510,6 +510,11 @@ void updateSampleSD()
     if(!manualTimeEntry)
     {
       display.clearDisplay();
+      display.drawLine(0, display.height()-10, display.width()-1, display.height()-10, SSD1327_WHITE);
+      display.drawLine(display.width()/2 - 1, display.height()-10, display.width()/2 - 1, display.height()-1, SSD1327_WHITE);
+      display.setTextColor(SSD1327_WHITE);
+      display.setCursor(10, display.height()-8);
+      display.print("Back ");
       updateDisplay("Reading GPS...", 40, false);
       display.display();
 
@@ -977,7 +982,15 @@ void createDataFiles()
     {
       gpsReadCurMillis = millis();
       display.clearDisplay();
+      display.drawLine(0, display.height()-10, display.width()-1, display.height()-10, SSD1327_WHITE);
+      display.drawLine(display.width()/2 - 1, display.height()-10, display.width()/2 - 1, display.height()-1, SSD1327_WHITE);
+      display.setTextColor(SSD1327_WHITE);
+      display.setCursor(10, display.height()-8);
+      display.print("Back ");
       updateDisplay("Reading GPS...", 40, false);
+      updateDisplay("(First GPS read", 56, false);
+      updateDisplay("may take a", 64, false);
+      updateDisplay("few minutes)", 72, false);
       display.display();
 
       readGps();
