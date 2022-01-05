@@ -994,6 +994,11 @@ void createDataFiles()
         updateDisplay("Please enter time", 48, false);
         updateDisplay("manually", 56, false);
         display.display();
+        // turn off GPS
+        if(gpsAwake)
+        {
+          toggleGps();
+        }
         prevState = state;
         state = 0;
         page = 1;
