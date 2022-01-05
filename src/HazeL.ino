@@ -1474,7 +1474,7 @@ void displayPage(uint8_t page)
     case(1): // Time entry method menu
     {
       display.drawLine(0, 10, display.width()-1, 10, SSD1327_WHITE);
-      updateDisplay("Time entry method?", 0, false);
+      updateDisplay("Timestamp method?", 0, false);
       if (currentVertMenuSelection == 0) 
       {
         updateDisplay("Auto (GPS)\n", 12, true);
