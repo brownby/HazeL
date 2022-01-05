@@ -701,6 +701,7 @@ void updateSampleSD()
       metaFile.print(',');
       metaFile.print(press.integral); metaFile.print('.'); metaFile.print(press.fractional);
       metaFile.print('\n');
+      metaFile.close();
     }
     else
     {
