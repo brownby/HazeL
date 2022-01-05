@@ -1692,7 +1692,7 @@ int cmpstr(void const *a, void const *b)
   char const *aa = (char const *)a;
   char const *bb = (char const *)b;
 
-  return strcmp(aa, bb);
+  return -1*strcmp(aa, bb);
 }
 
 /*
