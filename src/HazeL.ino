@@ -600,7 +600,7 @@ void updateSampleSD()
         toggleGps();
         if (timeoutFlag)
         {
-          delay(500); // add extra delay after first read or timeout to make sure sleep command is properly interpreted before next read
+          delay(500); // add extra delay after timeout to make sure sleep command is properly interpreted before next read
         }
       }
 
