@@ -1605,33 +1605,32 @@ void displayPage(uint8_t page)
     }
     case(5): // Data collection
     {
-      uint16_t PM1p0_std = dustSensor.data.PM1p0_std;
-      uint16_t PM2p5_std = dustSensor.data.PM2p5_std;
-      uint16_t PM10p0_std = dustSensor.data.PM10p0_std;
-      uint16_t PM1p0_atm = dustSensor.data.PM1p0_atm;
-      uint16_t PM2p5_atm = dustSensor.data.PM2p5_atm;
-      uint16_t PM10p0_atm = dustSensor.data.PM10p0_atm;
+      // uint16_t PM1p0_std = dustSensor.data.PM1p0_std;
+      // uint16_t PM2p5_std = dustSensor.data.PM2p5_std;
+      // uint16_t PM10p0_std = dustSensor.data.PM10p0_std;
+      // uint16_t PM1p0_atm = dustSensor.data.PM1p0_atm;
+      // uint16_t PM2p5_atm = dustSensor.data.PM2p5_atm;
+      // uint16_t PM10p0_atm = dustSensor.data.PM10p0_atm;
       uint16_t count_0p3um = dustSensor.data.count_0p3um;
-      uint16_t count_0p5um = dustSensor.data.count_0p5um;
-      uint16_t count_1p0um = dustSensor.data.count_1p0um;
-      uint16_t count_2p5um = dustSensor.data.count_2p5um;
-      uint16_t count_5p0um = dustSensor.data.count_5p0um;
-      uint16_t count_10p0um = dustSensor.data.count_10p0um;
+      // uint16_t count_0p5um = dustSensor.data.count_0p5um;
+      // uint16_t count_1p0um = dustSensor.data.count_1p0um;
+      // uint16_t count_2p5um = dustSensor.data.count_2p5um;
+      // uint16_t count_5p0um = dustSensor.data.count_5p0um;
+      // uint16_t count_10p0um = dustSensor.data.count_10p0um;
 
-      char displayText[50];
       char timeText[50];
-      char pm1p0Text[10];
-      char pm2p5Text[10];
-      char pm10p0Text[10];
+      // char pm1p0Text[10];
+      // char pm2p5Text[10];
+      // char pm10p0Text[10];
       char hourText[10];
       char minuteText[10];
       char monthText[10];
       char dayText[10];
       char yearText[10];
 
-      itoa(PM1p0_atm, pm1p0Text, 10);
-      itoa(PM2p5_atm, pm2p5Text, 10);
-      itoa(PM10p0_atm, pm10p0Text, 10);
+      // itoa(PM1p0_atm, pm1p0Text, 10);
+      // itoa(PM2p5_atm, pm2p5Text, 10);
+      // itoa(PM10p0_atm, pm10p0Text, 10);
 
       itoa(utcHour, hourText, 10);
       itoa(utcMinute, minuteText, 10);
@@ -1639,20 +1638,29 @@ void displayPage(uint8_t page)
       itoa(utcDay, dayText, 10);
       itoa(utcYear, yearText, 10);
 
-      strcpy(displayText, "PM1.0:  ");
-      strcat(displayText, pm1p0Text);
-      strcat(displayText, " ug/m3");
-      updateDisplay(displayText, 24, false);
+      display.setTextSize(2);
+      display.setCursor(0, 20);
+      display.print(">0.3um:");
+      display.setCursor(0, 48);
+      display.print(count_0p3um);
+      display.setCursor(0, 62);
+      display.print("count/0.1L");
+      display.setTextSize(1);
 
-      strcpy(displayText, "PM2.5:  ");
-      strcat(displayText, pm2p5Text);
-      strcat(displayText, " ug/m3");
-      updateDisplay(displayText, 32, false);
+      // strcpy(displayText, "PM1.0:  ");
+      // strcat(displayText, pm1p0Text);
+      // strcat(displayText, " ug/m3");
+      // updateDisplay(displayText, 24, false);
 
-      strcpy(displayText, "PM10.0: ");
-      strcat(displayText, pm10p0Text);
-      strcat(displayText, " ug/m3");
-      updateDisplay(displayText, 40, false);
+      // strcpy(displayText, "PM2.5:  ");
+      // strcat(displayText, pm2p5Text);
+      // strcat(displayText, " ug/m3");
+      // updateDisplay(displayText, 32, false);
+
+      // strcpy(displayText, "PM10.0: ");
+      // strcat(displayText, pm10p0Text);
+      // strcat(displayText, " ug/m3");
+      // updateDisplay(displayText, 40, false);
 
       strcpy(timeText, monthText);
       strcat(timeText, "/");
@@ -1672,7 +1680,7 @@ void displayPage(uint8_t page)
       }
       strcat(timeText, minuteText);
       if(gpsDisplayFail || manualTimeEntry) strcat(timeText, " (RTC)");
-      updateDisplay(timeText, 72, false);
+      updateDisplay(timeText, 108, false);
       break;
     }
   }
