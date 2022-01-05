@@ -968,6 +968,11 @@ void createDataFiles()
     unsigned long gpsReadStartMillis = millis();
     unsigned long gpsTimeoutMillis = GPS_FIRST_TIMEOUT;
 
+    if(!gpsAwake)
+    {
+      toggleGps();
+    }
+
     while (true)
     {
       gpsReadCurMillis = millis();
@@ -1031,6 +1036,13 @@ void createDataFiles()
     }
 
   }
+
+  // put GPS to sleep if it's woken up
+  if(gpsAwake)
+  {
+    toggleGps();
+  }
+
   // RTC clock should be set (whether manually or with GPS)
   year = rtc.getYear();
   month = rtc.getMonth();
