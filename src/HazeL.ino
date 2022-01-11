@@ -80,8 +80,8 @@ uint8_t manualDay = 1;
 uint16_t manualYear = CUR_YEAR;
 uint8_t manualHour = 0;
 uint8_t manualMinute = 0;
-int8_t manualTimeZone = 0; // Hours behind or ahead of UTC
 bool manualTimeEntry = false; // false means use GPS
+bool rtcSet = false; // flag to indicate if RTC is set or not
 RTCZero rtc;
 
 Adafruit_SSD1327 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
@@ -342,6 +342,14 @@ void loop() {
         else if(currentVertMenuSelection == 1) // Use manual entry + RTC
         {
           page = 2; // enter date
+          if(rtcSet)
+          {
+            manualDay = rtc.getDay();
+            manualHour = rtc.getHours();
+            manualMinute = rtc.getMinutes();
+            manualMonth = rtc.getMonth();
+            manualYear = rtc.getYear();
+          }
         }
       }
       else if (page == 2)
@@ -368,6 +376,8 @@ void loop() {
         // set RTC
         rtc.setDate(manualDay, manualMonth, manualYear % 100); // year is saved as an offset from 2000
         rtc.setTime(manualHour, manualMinute, 0);
+
+        if(!rtcSet) rtcSet = true;
         
         manualTimeEntry = true; // flag to indicate that RTC is being used for time stamps, not GPS
         createDataFiles();
@@ -572,9 +582,11 @@ void updateSampleSD()
           // set time for now()
           setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
 
-          // resync RTC every GPS read
+          // resync RTC every successful GPS read
           rtc.setDate(gps.date.day(), gps.date.month(), gps.date.year());
           rtc.setTime(gps.time.hour(), gps.time.minute(), gps.time.second());
+
+          if(!rtcSet) rtcSet = true;
 
           // check for stale GPS timestamps
           if (now() > prevTimeStamp)
@@ -1051,6 +1063,9 @@ void createDataFiles()
         rtc.setHours(gps.time.hour());
         rtc.setMinutes(gps.time.minute());
         rtc.setSeconds(gps.time.second());
+
+        if(!rtcSet) rtcSet = true;
+
         break;
       
       }
