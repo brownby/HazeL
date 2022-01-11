@@ -572,6 +572,10 @@ void updateSampleSD()
           // set time for now()
           setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
 
+          // resync RTC every GPS read
+          rtc.setDate(gps.date.day(), gps.date.month(), gps.date.year());
+          rtc.setTime(gps.time.hour(), gps.time.minute(), gps.time.second());
+
           // check for stale GPS timestamps
           if (now() > prevTimeStamp)
           {
