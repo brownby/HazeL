@@ -22,8 +22,12 @@ $COM = [System.IO.Ports.SerialPort]::getportnames()
 
 $port = new-Object System.IO.Ports.SerialPort $COM,9600,None,8,one
 $port.open()
+
+$datetime = Get-Date -UFormat %y%m%d_%H%M%S
+
+$file = "HazeL_$datetime.txt"
 do {
     #Tee-Object -InputObject $port.ReadLine() -FilePath .\HazeL_data_raw.txt -Append
-    Tee-Object -InputObject $port.ReadLine() -FilePath (Force-Resolve-Path ".\HazeL_data_raw.txt") -Append
+    Tee-Object -InputObject $port.ReadLine() -FilePath (Force-Resolve-Path $file) -Append
 }
 while ($port.IsOpen)

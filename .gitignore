@@ -5,3 +5,4 @@
 .vscode/ipch
 secrets.h
 HazeL.ino.cpp
+script/HazeL_*
