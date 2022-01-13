@@ -60,9 +60,9 @@ Auto (GPS)
 Manual
 ```
 
-**Auto (GPS)**: HazeL will use the GPS module to timestamp data (as well as provide latitude, longitude, and altitude). The first GPS read can take a few minutes - if it takes longer than ten minutes, the read will time out and a message will appear suggesting you enter a timestamp manually. 
+**`Auto (GPS)`**: HazeL will use the GPS module to timestamp data (as well as provide latitude, longitude, and altitude). The first GPS read can take a few minutes - if it takes longer than ten minutes, the read will time out and a message will appear suggesting you enter a timestamp manually. 
 
-**Manual**: You will enter a date and time (**Note**: the time should be UTC) manually using the two knobs, at which point HazeL will sync the microcontroller's real-time counter (RTC) peripheral to the time you entered. Further timestamps will be pulled from the RTC. 
+**`Manual`**: You will enter a date and time (**Note**: the time should be UTC) manually using the two knobs, at which point HazeL will sync the microcontroller's real-time counter (RTC) peripheral to the time you entered. Further timestamps will be pulled from the RTC. 
 
 Once an initial timestamp is collected (whether by the GPS or entered by the user), HazeL creates two timestamped files on the SD card that will be used to store data and metadata. The naming convetion for the files is:
 ```
@@ -70,15 +70,17 @@ YYMMDD_HHMMSS_data.txt
 YYMMDD_HHMMSS_meta.txt
 ```
 
-Every 2.5 seconds, particulate matter data are collected from teh dust sensor and saved in the `data` file. For the list of data that are collected and saved, see the [HM3301 dust sensor section](#hm3301-dust-sensor) below.
+Every 2.5 seconds, particulate matter data are collected from the dust sensor and saved in the `data` file. For the list of data that are collected and saved, see the [HM3301 dust sensor section](#hm3301-dust-sensor) below.
 
-Every 10 seconds, a line of metadata is stored in the `meta` file.
+Every 10 seconds, a line of metadata is stored in the `meta` file. One line of metadata includes: ISO8601 UTC timestamp, latitude, longitude, altitude, temperature in degrees C, and pressure in pascals. If the RTC is being used for timestamps (i.e. if `Manual` was selected), the lat, long, and alt entries will be empty. The RTC will sometimes also be used if you selected `Auto (GPS)`, in cases where a given GPS read takes longer than 5 seconds.
 
-Data are stored in a file called `data.txt` (HazeL will create this file on the SD card if it doesn't already exist, otherwise it will just begin appending data). Particulate matter data are collected from the dust sensor every 2.5 seconds and saved to the SD card (see below for more information on the exact data returned). As data are saved to the SD card, they are also sent over USB, providing the option for capturing or displaying a live data stream (see [scripts](scripts) for more info). PM1.0, PM2.5, and PM10.0 concentrations are displayed on the OLED display every time data are saved.
+Every line (in both the `data` and `meta` files) begins with the number of ms elapsed since data collection began, to allow for syncing the two files while processing data. 
 
-Every 10 seconds, a line of metadata (beginning with a `#`) is stored, including an ISO8601 UTC timestamp, latitude, longitude, altitude, temperature in degrees C, and pressure in pascals. To save energy, the GPS is put to sleep in between GPS reads.
 
-Every line (data and metadata) begins with the number of ms elapsed since the HazeL was turned on.
+
+As data are being saved the SD card, they are also being sent over USB to allow for capturing a livestream of data. Livestreamed metadata lines begin with a `#` to differentiate them from data. 
+
+
 
 **Note:** Depending on the strength of GPS signals, the first GPS read may take a few minutes, during which time the OLED will read:
 ```
@@ -88,6 +90,8 @@ Reading GPS...
 HazeL will wait up to 10 minutes for a successful GPS read before it starts collecting data. If the initial GPS read takes longer than 10 minutes, HazeL will begin collecting data, and metadata lines will read `GPS read failed` before the temperature and pressure. 
 
 # HazeL Components
+
+## Arduino MKR WiFi 1010
 
 The [Arduino MKR1000](https://store.arduino.cc/usa/arduino-mkr1000-with-headers-mounted) serves as the brains of HazeL, mounted on the [MKR Connector Carrier](https://store.arduino.cc/usa/arduino-mkr-connector-carrier). In addition to providing plenty of Grove connectors, the MKR Connector Carrier also has an on-board buck converter to step down the incoming 9V from a 9V battery to 5V for the Arduino, allowing for battery operation. The [MKR SD Proto Shield](https://store.arduino.cc/usa/mkr-sd-proto-shield) is mounted onto the MKR1000, which provides a microSD card slot, as well as a protoboard onto which a button and switch can be soldered (used for initating data uploads over USB, more details in the [scripts](scripts) folder).
 
