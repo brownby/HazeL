@@ -1699,6 +1699,7 @@ void displayPage(uint8_t page)
       }
       strcat(timeText, minuteText);
       if(gpsDisplayFail || manualTimeEntry) strcat(timeText, " (RTC)");
+      else strcat(timeText, " (GPS)");
       updateDisplay(timeText, 108, false);
       break;
     }
