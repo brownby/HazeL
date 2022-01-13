@@ -4,7 +4,7 @@
 
 # HazeL
 
-HazeL is a low-cost, easy to manufacture particulate matter (PM) sensor created for the Harvard University SEAS course ESE6, Introduction to Environmental Science and Engineering. It was designed in response to the need for remote lab activites during the COVID-19 pandemic. Instead of students needing to share a limited number of expensive sensors, every student was able to collect their own data with their own personal sensor. 
+HazeL is a low-cost, easy to manufacture particulate matter (PM) sensor created for the Harvard University SEAS course ESE6, Introduction to Environmental Science and Engineering. It was designed in response to the need for remote lab activites during the COVID-19 pandemic, but will continue to be used for the foreseeable future. Instead of students needing to share a limited number of expensive sensors, every student is able to collect their own data with their own personal sensor. 
 
 <!-- <p align="center">
 <img width="800" src="img/hazel_diagram.png" alt="HazeL"> 
@@ -34,9 +34,10 @@ All modules and sensors in HazeL use the [Grove connector system](https://www.se
 
 A simplified electrical schematic of HazeL is shown below. **A few things to note:** the level-shifting circuitry present on the MKR connector carrier is abstracted away in this schematic, but remember that Grove devices are 5V logic, while the MKR-series Arduinos are 3.3V logic devices. In addition, the A2 and A3 pins use the internal pull-down and pull-up resistors, respectively, of the SAMD21. Not all Arduinos have the option of internal pull-downs, so you may need a physical pull-down resistor on A2 (or alter the code slightly to use an internal pull-up). 
 
-<p align="center">
+<!-- <p align="center">
 <img width="800" src="img/hazel_electrical_diagram.png" alt="HazeL electrical schematic">
-</p>
+</p> -->
+### [Insert updated schematic here]
 
 We have open sourced all of our design files in this repository, including the 3D printing files for the [enclosure](enclosure). If you are interested in deploying your own version of HazeL and have any questions beyond those answered by looking through this repository, feel free to reach out to Ben Brown at brown@g.harvard.edu. 
 
@@ -62,9 +63,9 @@ Manual
 
 **`Auto (GPS)`**: HazeL will use the GPS module to timestamp data (as well as provide latitude, longitude, and altitude). The first GPS read can take a few minutes - if it takes longer than ten minutes, the read will time out and a message will appear suggesting you enter a timestamp manually. 
 
-**`Manual`**: You will enter a date and time (**Note**: the time should be UTC) manually using the two knobs, at which point HazeL will sync the microcontroller's real-time counter (RTC) peripheral to the time you entered. Further timestamps will be pulled from the RTC. 
+**`Manual`**: You will enter a date and time manually using the two knobs (**Note**: the time should be in UTC), at which point HazeL will sync the microcontroller's real-time counter (RTC) peripheral to the time you entered. During data collection, further timestamps will be pulled from the RTC. 
 
-Once an initial timestamp is collected (whether by the GPS or entered by the user), HazeL creates two timestamped files on the SD card that will be used to store data and metadata. The naming convetion for the files is:
+Once an initial timestamp is collected (whether by the GPS or entered by the user), HazeL creates two timestamped files on the SD card that will be used to store data and metadata. The naming convention for the files is:
 ```
 YYMMDD_HHMMSS_data.txt
 YYMMDD_HHMMSS_meta.txt
@@ -72,34 +73,78 @@ YYMMDD_HHMMSS_meta.txt
 
 Every 2.5 seconds, particulate matter data are collected from the dust sensor and saved in the `data` file. For the list of data that are collected and saved, see the [HM3301 dust sensor section](#hm3301-dust-sensor) below.
 
-Every 10 seconds, a line of metadata is stored in the `meta` file. One line of metadata includes: ISO8601 UTC timestamp, latitude, longitude, altitude, temperature in degrees C, and pressure in pascals. If the RTC is being used for timestamps (i.e. if `Manual` was selected), the lat, long, and alt entries will be empty. The RTC will sometimes also be used if you selected `Auto (GPS)`, in cases where a given GPS read takes longer than 5 seconds.
+Every 10 seconds, a line of metadata is stored in the `meta` file. One line of metadata includes: 
+```
+ISO8601 UTC timestamp, latitude, longitude, altitude, temperature in degrees C, pressure in pascals
+```
+If the RTC is being used for timestamps (i.e. if `Manual` was selected), the latitude, longitude, and altitude entries will be empty. The RTC will also be used if you selected `Auto (GPS)`, but only in cases where a GPS read takes longer than 5 seconds.
 
 Every line (in both the `data` and `meta` files) begins with the number of ms elapsed since data collection began, to allow for syncing the two files while processing data. 
 
-
-
 As data are being saved the SD card, they are also being sent over USB to allow for capturing a livestream of data. Livestreamed metadata lines begin with a `#` to differentiate them from data. 
 
+The OLED display will also show data as its collected, specifically the count/0.1L of >0.3um particles. The current date and time (in UTC) are shown at the bottom of the display, as well as the source of the timestamp (either `RTC` or `GPS`):
 
+```
+>0.3um:
 
-**Note:** Depending on the strength of GPS signals, the first GPS read may take a few minutes, during which time the OLED will read:
+400
+count/0.1L
+
+1/13/2022 18:24 (GPS)
+```
+
+When you are done collecting data, you can press the back button to return to the previous menu, or simply turn off the device.
+
+**Note on GPS:** 
+As mentioned above, depending on the strength of GPS signals, the first GPS read may take a few minutes, during which time the OLED will read:
 ```
 Reading GPS...
-(GPS warming up)
-```
-HazeL will wait up to 10 minutes for a successful GPS read before it starts collecting data. If the initial GPS read takes longer than 10 minutes, HazeL will begin collecting data, and metadata lines will read `GPS read failed` before the temperature and pressure. 
 
-# HazeL Components
+(First GPS read
+may take a
+few minutes)
+```
+HazeL will wait up to 10 minutes for a successful first GPS read before it starts collecting data. If the initial GPS read takes longer than 10 minutes, it is recommended to enter a timestamp manually instead. 
+
+The RTC is synced to the GPS on every successful GPS read. When a GPS read is unsuccessful (i.e. takes longer than 5 seconds), HazeL will automatically pull the timestamp from the RTC instead. This should allow the RTC to fill in gaps in GPS reads caused by spotty GPS signals. As noted above, any metadata line that uses the RTC will have blank latitude, longitude, and altitude entries.
+
+## Uploading data
+
+When you select `Upload data`, a new menu will appear with a list of all of the data and metadata files stored on the SD card in reverse chronological order. For example, if you collected data three times on `1/13/22`, once at `9:24:29`, once at `13:40:12`, and once at `18:08:57`, the screen would look like this:
+
+```
+Select a file
+___________________
+221301_180857_meta
+221301_180857_data
+221301_134012_meta
+221301_134012_data
+221301_092429_meta
+221301_092429_data
+```
+
+Scroll to the file you would like to upload with the right knob, and select it by pressing the right knob. Once you select a file, the data from the file is sent over USB, and the screen will display:
+
+```
+Uploading
+<file_name>
+via serial port
+```
+
+In order to save data to your computer, you must use one of the data download scripts in the [scripts](scripts) folder of this repository. You can find more info on how to use the scripts in the README in that folder. 
+
+# HazeL components
 
 ## Arduino MKR WiFi 1010
 
-The [Arduino MKR1000](https://store.arduino.cc/usa/arduino-mkr1000-with-headers-mounted) serves as the brains of HazeL, mounted on the [MKR Connector Carrier](https://store.arduino.cc/usa/arduino-mkr-connector-carrier). In addition to providing plenty of Grove connectors, the MKR Connector Carrier also has an on-board buck converter to step down the incoming 9V from a 9V battery to 5V for the Arduino, allowing for battery operation. The [MKR SD Proto Shield](https://store.arduino.cc/usa/mkr-sd-proto-shield) is mounted onto the MKR1000, which provides a microSD card slot, as well as a protoboard onto which a button and switch can be soldered (used for initating data uploads over USB, more details in the [scripts](scripts) folder).
+The [Arduino MKR WiFi 1010](https://store-usa.arduino.cc/products/arduino-mkr-wifi-1010) serves as the brains of HazeL, mounted on the [MKR Connector Carrier](https://store.arduino.cc/usa/arduino-mkr-connector-carrier). The [MKR SD Proto Shield](https://store.arduino.cc/usa/mkr-sd-proto-shield) is mounted onto the MKR WiFi 1010, which provides a microSD card slot.
 
 The Arduino code can be found in [HazeL.ino](src/HazeL.ino). While only tested on the MKR1000 and MKR WiFi 1010, it should be compatible with most SAMD21-based Arduinos (**note:** this is not true of the code on the thingspeak branch, which takes advantage of the WiFi capabilities of the MKR1000 and MKR WiFi 1010 to create an IoT enabled version of HazeL). Feel free to submit an issue if you encounter issues on other platforms. 
 
 This repository is structured as a [PlatformIO](https://platformio.org/) project, if you'd like to use it within the Arduino IDE instead, move the contents of the [src](src) and [include](include) folders into a folder entitled `HazeL`, and open `HazeL.ino` in the Arduino IDE. 
 
-## Grove modules
+## Other modules
 
 ### [HM3301 dust sensor](https://www.seeedstudio.com/Grove-Laser-PM2-5-Sensor-HM3301.html)
 
@@ -140,14 +185,20 @@ It should be mounted on the outside of the enclosure as well, close to the HM330
 
 The Air530 is low-cost GPS module that comes with a small antenna. It communicates over UART, currently just using functions inside of [HazeL.ino](src/HazeL.ino), but I will likely break this out into a separate library in the future. The GPS readings are decoded using the [TinyGPS++ library](http://arduiniana.org/libraries/tinygpsplus/) by Mikal Hart.
 
-### [SSD1315 OLED display](https://www.seeedstudio.com/Grove-OLED-Display-0-96-SSD1315-p-4294.html)
+### [SSD1327 OLED display](https://www.adafruit.com/product/4741)
 
 <img width="400" src="img/ssd1315.jpg" alt="SSD1315 OLED display">
 
-The SSD1315 is a super low-cost 0.96" monochrome OLED display. The display is used to display data to the user, as well as various error messages if HazeL encounters issues on start-up. The OLED communicates over I2C using the [u8g2 library](https://github.com/olikraus/u8g2) by olikraus. 
+The SSD1327 is a 1.5" 128x128 grayscale OLED display. The display is used to display data to the user, as well as menus for users to navigate. The OLED communicates over I2C using the [Adafruit_SSD1327 library](https://github.com/adafruit/Adafruit_SSD1327).
 
 ### [I2C hub](https://www.seeedstudio.com/Grove-I2C-Hub.html)
 
 <img width="400" src="img/i2c_hub.jpg" alt="Grove I2C hub">
 
 The Grove I2C hub was used to connect the I2C devices (dust sensor, T+P sensor, and OLED display) to the MKR1000's I2C bus.
+
+### [Encoders](https://www.digikey.com/en/products/detail/bourns-inc/PEC11R-4220F-S0024/4499660)
+
+<img width="400" src="img/encoder.jpg" alt="Rotary encoder">
+
+These encoders are used as the knobs and buttons to interact with HazeL. They are mounted on a custom PCB. 
