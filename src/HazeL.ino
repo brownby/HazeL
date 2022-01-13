@@ -823,7 +823,8 @@ void updateSampleSD()
     dataFile.print(",");
     dataFile.print(count_5p0um); // >5.0um
     dataFile.print(",");
-    dataFile.println(count_10p0um); // >10.0um
+    dataFile.print(count_10p0um); // >10.0um
+    dataFile.print('\n');
     dataFile.close();
 
     ledFlag = true;
