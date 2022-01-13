@@ -6,28 +6,29 @@
 
 HazeL is a low-cost, easy to manufacture particulate matter (PM) sensor created for the Harvard University SEAS course ESE6, Introduction to Environmental Science and Engineering. It was designed in response to the need for remote lab activites during the COVID-19 pandemic. Instead of students needing to share a limited number of expensive sensors, every student was able to collect their own data with their own personal sensor. 
 
-<p align="center">
+<!-- <p align="center">
 <img width="800" src="img/hazel_diagram.png" alt="HazeL"> 
-</p>
+</p> -->
+### [Insert image here]
 The components that make up HazeL are, as numbered in the above image:
 
 1. Power switch
 2. GPS module
 3. OLED display
 4. MKR SD shield
-5. 9V battery
-6. Grove I2C hub
-7. MKR connector carrier
-8. Arduino MKR1000
-9. 10mm standoffs
-10. Data upload button
-11. MicroSD card
-12. Grove cable assemblies
-13. Acrylic panels
-14. 3D printed enclosure
-15. GPS antenna
-16. Temperature and pressure sensor
-17. Dust sensor
+5. Grove I2C hub
+6. MKR connector carrier
+7. Arduino MKR WiFi 1010
+8. 10mm standoffs
+9. Data upload button
+10. MicroSD card
+11. Grove cable assemblies
+12. Acrylic panels
+13. 3D printed enclosure
+14. GPS antenna
+15. Temperature and pressure sensor
+16. Dust sensor
+17. Two rotary encoders mounted on a custom PCB
 
 All modules and sensors in HazeL use the [Grove connector system](https://www.seeedstudio.com/category/Grove-c-1003.html). You can find links to all of the components of HazeL in the next few sections.
 
@@ -39,9 +40,41 @@ A simplified electrical schematic of HazeL is shown below. **A few things to not
 
 We have open sourced all of our design files in this repository, including the 3D printing files for the [enclosure](enclosure). If you are interested in deploying your own version of HazeL and have any questions beyond those answered by looking through this repository, feel free to reach out to Ben Brown at brown@g.harvard.edu. 
 
-## Device operation
+# Device operation
 
-On start-up, HazeL initializes all sensors and modules, then begins collecting data. Data are stored in a file called `data.txt` (HazeL will create this file on the SD card if it doesn't already exist, otherwise it will just begin appending data). Particulate matter data are collected from the dust sensor every 2.5 seconds and saved to the SD card (see below for more information on the exact data returned). As data are saved to the SD card, they are also sent over USB, providing the option for capturing or displaying a live data stream (see [scripts](scripts) for more info). PM1.0, PM2.5, and PM10.0 concentrations are displayed on the OLED display every time data are saved.
+On start-up, HazeL initializes all sensors and modules, then opens the home menu with two options:
+```
+Start data collection
+Upload data
+```
+
+For all menus, you use the right knob to scroll up and down, and press the knob to select. The left knob will be used to scroll left and right (when relevant), and can be pressed to go back a menu. 
+
+## Data collection
+
+When you select `Start data collection`, another menu will appear asking you what method you would like to use to timestamp your data:
+```
+Timestamp method?
+_________________
+Auto (GPS)
+Manual
+```
+
+**Auto (GPS)**: HazeL will use the GPS module to timestamp data (as well as provide latitude, longitude, and altitude). The first GPS read can take a few minutes - if it takes longer than ten minutes, the read will time out and a message will appear suggesting you enter a timestamp manually. 
+
+**Manual**: You will enter a date and time (**Note**: the time should be UTC) manually using the two knobs, at which point HazeL will sync the microcontroller's real-time counter (RTC) peripheral to the time you entered. Further timestamps will be pulled from the RTC. 
+
+Once an initial timestamp is collected (whether by the GPS or entered by the user), HazeL creates two timestamped files on the SD card that will be used to store data and metadata. The naming convetion for the files is:
+```
+YYMMDD_HHMMSS_data.txt
+YYMMDD_HHMMSS_meta.txt
+```
+
+Every 2.5 seconds, particulate matter data are collected from teh dust sensor and saved in the `data` file. For the list of data that are collected and saved, see the [HM3301 dust sensor section](#the-arduino-(and-accessories)) below.
+
+Every 10 seconds, a line of metadata is stored in the `meta` file.
+
+Data are stored in a file called `data.txt` (HazeL will create this file on the SD card if it doesn't already exist, otherwise it will just begin appending data). Particulate matter data are collected from the dust sensor every 2.5 seconds and saved to the SD card (see below for more information on the exact data returned). As data are saved to the SD card, they are also sent over USB, providing the option for capturing or displaying a live data stream (see [scripts](scripts) for more info). PM1.0, PM2.5, and PM10.0 concentrations are displayed on the OLED display every time data are saved.
 
 Every 10 seconds, a line of metadata (beginning with a `#`) is stored, including an ISO8601 UTC timestamp, latitude, longitude, altitude, temperature in degrees C, and pressure in pascals. To save energy, the GPS is put to sleep in between GPS reads.
 
@@ -54,11 +87,11 @@ Reading GPS...
 ```
 HazeL will wait up to 10 minutes for a successful GPS read before it starts collecting data. If the initial GPS read takes longer than 10 minutes, HazeL will begin collecting data, and metadata lines will read `GPS read failed` before the temperature and pressure. 
 
-## The Arduino (and accessories)
+# The Arduino (and accessories)
 
 The [Arduino MKR1000](https://store.arduino.cc/usa/arduino-mkr1000-with-headers-mounted) serves as the brains of HazeL, mounted on the [MKR Connector Carrier](https://store.arduino.cc/usa/arduino-mkr-connector-carrier). In addition to providing plenty of Grove connectors, the MKR Connector Carrier also has an on-board buck converter to step down the incoming 9V from a 9V battery to 5V for the Arduino, allowing for battery operation. The [MKR SD Proto Shield](https://store.arduino.cc/usa/mkr-sd-proto-shield) is mounted onto the MKR1000, which provides a microSD card slot, as well as a protoboard onto which a button and switch can be soldered (used for initating data uploads over USB, more details in the [scripts](scripts) folder).
 
-The Arduino code can be found in [HazeL.ino](src/HazeL.ino). While only tested on the MKR1000, it should be compatible with most Arduinos (**note:** this is not true of the code on the thingspeak branch, which takes advantage of the WiFi capabilities of the MKR1000 to create an IoT enabled version of HazeL). Feel free to submit an issue if you encounter issues on other platforms. 
+The Arduino code can be found in [HazeL.ino](src/HazeL.ino). While only tested on the MKR1000 and MKR WiFi 1010, it should be compatible with most SAMD21-based Arduinos (**note:** this is not true of the code on the thingspeak branch, which takes advantage of the WiFi capabilities of the MKR1000 and MKR WiFi 1010 to create an IoT enabled version of HazeL). Feel free to submit an issue if you encounter issues on other platforms. 
 
 This repository is structured as a [PlatformIO](https://platformio.org/) project, if you'd like to use it within the Arduino IDE instead, move the contents of the [src](src) and [include](include) folders into a folder entitled `HazeL`, and open `HazeL.ino` in the Arduino IDE. 
 
