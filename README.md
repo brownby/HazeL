@@ -70,7 +70,7 @@ YYMMDD_HHMMSS_data.txt
 YYMMDD_HHMMSS_meta.txt
 ```
 
-Every 2.5 seconds, particulate matter data are collected from teh dust sensor and saved in the `data` file. For the list of data that are collected and saved, see the [HM3301 dust sensor section](###hm3301-dust-sensor) below.
+Every 2.5 seconds, particulate matter data are collected from teh dust sensor and saved in the `data` file. For the list of data that are collected and saved, see the [HM3301 dust sensor section](#hm3301-dust-sensor) below.
 
 Every 10 seconds, a line of metadata is stored in the `meta` file.
 
