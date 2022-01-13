@@ -27,7 +27,7 @@ $datetime = Get-Date -UFormat %y%m%d_%H%M%S
 
 $file = "HazeL_$datetime.txt"
 do {
-    #Tee-Object -InputObject $port.ReadLine() -FilePath .\HazeL_data_raw.txt -Append
-    Tee-Object -InputObject $port.ReadLine() -FilePath (Force-Resolve-Path $file) -Append
+    $line = $port.ReadLine();
+    Add-Content -Path (Force-Resolve-Path $file) -Value "$line`n" -PassThru -NoNewline
 }
 while ($port.IsOpen)
