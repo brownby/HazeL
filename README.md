@@ -70,7 +70,7 @@ YYMMDD_HHMMSS_data.txt
 YYMMDD_HHMMSS_meta.txt
 ```
 
-Every 2.5 seconds, particulate matter data are collected from teh dust sensor and saved in the `data` file. For the list of data that are collected and saved, see the [HM3301 dust sensor section](#the-arduino-(and-accessories)) below.
+Every 2.5 seconds, particulate matter data are collected from teh dust sensor and saved in the `data` file. For the list of data that are collected and saved, see the [HM3301 dust sensor section](#hazel-components) below.
 
 Every 10 seconds, a line of metadata is stored in the `meta` file.
 
@@ -87,7 +87,7 @@ Reading GPS...
 ```
 HazeL will wait up to 10 minutes for a successful GPS read before it starts collecting data. If the initial GPS read takes longer than 10 minutes, HazeL will begin collecting data, and metadata lines will read `GPS read failed` before the temperature and pressure. 
 
-# The Arduino (and accessories)
+# HazeL Components
 
 The [Arduino MKR1000](https://store.arduino.cc/usa/arduino-mkr1000-with-headers-mounted) serves as the brains of HazeL, mounted on the [MKR Connector Carrier](https://store.arduino.cc/usa/arduino-mkr-connector-carrier). In addition to providing plenty of Grove connectors, the MKR Connector Carrier also has an on-board buck converter to step down the incoming 9V from a 9V battery to 5V for the Arduino, allowing for battery operation. The [MKR SD Proto Shield](https://store.arduino.cc/usa/mkr-sd-proto-shield) is mounted onto the MKR1000, which provides a microSD card slot, as well as a protoboard onto which a button and switch can be soldered (used for initating data uploads over USB, more details in the [scripts](scripts) folder).
 
