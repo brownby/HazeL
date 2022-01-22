@@ -582,8 +582,6 @@ void updateSampleSD()
           // set time for now()
           setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
 
-          Serial.print("now(): "); Serial.println((unsigned long)now());
-          Serial.print("prevTimeStamp: "); Serial.println((unsigned long)prevTimeStamp);
           // check for stale GPS timestamps
           if (now() > prevTimeStamp)
           {
