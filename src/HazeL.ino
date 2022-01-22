@@ -583,7 +583,7 @@ void updateSampleSD()
           setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
 
           // resync RTC every successful GPS read
-          rtc.setDate(gps.date.day(), gps.date.month(), gps.date.year());
+          rtc.setDate(gps.date.day(), gps.date.month(), gps.date.year() % 100);
           rtc.setTime(gps.time.hour(), gps.time.minute(), gps.time.second());
 
           if(!rtcSet) rtcSet = true;
@@ -1060,7 +1060,7 @@ void createDataFiles()
         // GPS data is valid, set RTC
         rtc.setDay(gps.date.day());
         rtc.setMonth(gps.date.month());
-        rtc.setYear(gps.date.year());
+        rtc.setYear(gps.date.year() % 100);
         rtc.setHours(gps.time.hour());
         rtc.setMinutes(gps.time.minute());
         rtc.setSeconds(gps.time.second());
