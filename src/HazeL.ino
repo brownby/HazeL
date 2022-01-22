@@ -582,17 +582,19 @@ void updateSampleSD()
           // set time for now()
           setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
 
-          // resync RTC every successful GPS read
-          rtc.setDate(gps.date.day(), gps.date.month(), gps.date.year() % 100);
-          rtc.setTime(gps.time.hour(), gps.time.minute(), gps.time.second());
-
-          if(!rtcSet) rtcSet = true;
-
+          Serial.print("now(): "); Serial.println((unsigned long)now());
+          Serial.print("prevTimeStamp: "); Serial.println((unsigned long)prevTimeStamp);
           // check for stale GPS timestamps
           if (now() > prevTimeStamp)
           {
             prevTimeStamp = now();
             gpsDisplayFail = false;
+
+            // resync RTC every successful GPS read
+            rtc.setDate(gps.date.day(), gps.date.month(), gps.date.year() % 100);
+            rtc.setTime(gps.time.hour(), gps.time.minute(), gps.time.second());
+
+            if(!rtcSet) rtcSet = true;
             break;
           }
           #ifdef DEBUG_PRINT
@@ -1056,6 +1058,10 @@ void createDataFiles()
         #ifdef DEBUG_PRINT
         Serial.println("GPS data valid");
         #endif
+
+        // set time for now()
+        // setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
+        // prevTimeStamp = now();
 
         // GPS data is valid, set RTC
         rtc.setDay(gps.date.day());
