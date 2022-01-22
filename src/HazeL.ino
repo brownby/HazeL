@@ -1007,14 +1007,6 @@ void createDataFiles()
     unsigned long gpsReadStartMillis = millis();
     unsigned long gpsTimeoutMillis = GPS_FIRST_TIMEOUT;
 
-    if(!gpsAwake)
-    {
-      toggleGps();
-    }
-
-    while (true)
-    {
-      gpsReadCurMillis = millis();
       display.clearDisplay();
       display.drawLine(0, display.height()-10, display.width()-1, display.height()-10, SSD1327_WHITE);
       display.drawLine(display.width()/2 - 1, display.height()-10, display.width()/2 - 1, display.height()-1, SSD1327_WHITE);
@@ -1026,6 +1018,15 @@ void createDataFiles()
       updateDisplay("may take a", 64, false);
       updateDisplay("few minutes)", 72, false);
       display.display();
+
+    if(!gpsAwake)
+    {
+      toggleGps();
+    }
+
+    while (true)
+    {
+      gpsReadCurMillis = millis();
 
       readGps();
 
