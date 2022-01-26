@@ -1036,19 +1036,26 @@ void createDataFiles()
         Serial.println("GPS timeout");
         #endif
         display.clearDisplay();
+        display.drawLine(0, display.height()-10, display.width()-1, display.height()-10, SSD1327_WHITE);
+        display.drawLine(display.width()/2 - 1, display.height()-10, display.width()/2 - 1, display.height()-1, SSD1327_WHITE);
+        display.setTextColor(SSD1327_WHITE);
+        display.setCursor(10, display.height()-8);
+        display.print("Back ");
         updateDisplay("GPS read failed", 40, false);
-        updateDisplay("Please enter time", 48, false);
-        updateDisplay("manually", 56, false);
+        updateDisplay("Please enter time", 56, false);
+        updateDisplay("manually", 64, false);
         display.display();
         // turn off GPS
         if(gpsAwake)
         {
           toggleGps();
         }
+        while(!encLeftButtonFlag); // wait for back button to be pressed
+        encLeftButtonFlag = false;
+        encLeftButtonISREn = true;
         prevState = state;
         state = 0;
         page = 1;
-        delay(2500);
         return;
       }
 
