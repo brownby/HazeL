@@ -31,7 +31,7 @@ do {
     Write-Host "`nFile detected: $file"
 
     # now set a timeout for reads, so that end of file can be detected
-    $port.ReadTimeout = 5000
+    $port.ReadTimeout = 500
 
     $outbuffer = [System.Collections.ArrayList]@()
 
