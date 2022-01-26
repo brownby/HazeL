@@ -45,7 +45,7 @@
 #define ENC_LEFT_A 5
 #define ENC_LEFT_B 7
 #define MENU_UPDATE_TIME 100 // milliseconds between menu updates
-#define DEBUG_PRINT
+// #define DEBUG_PRINT
 
 HM3301 dustSensor;
 BMP280 TPSensor;
@@ -850,7 +850,8 @@ void updateSampleSD()
 // upload SD card data over serial port
 void uploadSerial(char * fileName)
 {
-  encRightButtonISREn = false; // disable button ISR
+  // disable button ISRs
+  encRightButtonISREn = false; 
   encLeftButtonISREn = false;
   uint8_t buffer[512] = {0}; // buffer to read/write data 512 bytes at a time
   uint16_t writeLen = sizeof(buffer);
@@ -867,8 +868,9 @@ void uploadSerial(char * fileName)
   #ifdef DEBUG_PRINT
   Serial.println("Serial upload initiated");
   Serial.print("Uploading: ");
-  Serial.println(fileNameExtension);
   #endif
+  // Send file name as first line to be captured, download scripts will use this to name the file
+  Serial.print(fileNameExtension); Serial.print('\n');
 
   File file = SD.open(fileNameExtension, FILE_READ);
   while(file.available())
