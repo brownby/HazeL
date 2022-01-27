@@ -775,12 +775,6 @@ void updateSampleSD()
     
     Serial.print(msTimer);
     Serial.print(',');
-    Serial.print(PM1p0_std);
-    Serial.print(',');
-    Serial.print(PM2p5_std);
-    Serial.print(',');
-    Serial.print(PM10p0_std);
-    Serial.print(',');
     Serial.print(PM1p0_atm);
     Serial.print(',');
     Serial.print(PM2p5_atm);
@@ -800,12 +794,6 @@ void updateSampleSD()
     Serial.println(count_10p0um);
 
     dataFile.print(msTimer);
-    dataFile.print(',');
-    dataFile.print(PM1p0_std); // PM1.0 (standard)
-    dataFile.print(",");
-    dataFile.print(PM2p5_std); // PM2.5 (standard)
-    dataFile.print(",");
-    dataFile.print(PM10p0_std); // PM10.0 (standard)
     dataFile.print(",");
     dataFile.print(PM1p0_atm); // PM1.0 (atmo)
     dataFile.print(",");
