@@ -771,9 +771,34 @@ void updateSampleSD()
   dataFile = SD.open(dataFileName, FILE_WRITE);
   if(dataFile)
   {
+
+    // Get timestamp from RTC
+    utcYear = rtc.getYear() + 2000; // RTC year is stored as an offset from 2000
+    utcMonth = rtc.getMonth();
+    utcDay = rtc.getDay();
+    utcHour = rtc.getHours();
+    utcMinute = rtc.getMinutes();
+    utcSecond = rtc.getSeconds();
+
     // Display data in the serial monitor
     
     Serial.print(msTimer);
+    Serial.print(',');
+    Serial.print(utcYear);
+    Serial.print('-');
+    Serial.print(utcMonth);
+    Serial.print('-');
+    Serial.print(utcDay);
+    Serial.print('T');
+    if(utcHour < 10) Serial.print('0');
+    Serial.print(utcHour);
+    Serial.print(':') ;
+    if(utcMinute < 10) Serial.print('0');
+    Serial.print(utcMinute);
+    Serial.print(':');
+    if(utcSecond < 10) Serial.print('0');
+    Serial.print(utcSecond);
+    Serial.print("+00:00");
     Serial.print(',');
     Serial.print(PM1p0_atm);
     Serial.print(',');
@@ -794,6 +819,22 @@ void updateSampleSD()
     Serial.println(count_10p0um);
 
     dataFile.print(msTimer);
+    dataFile.print(',');
+    dataFile.print(utcYear);
+    dataFile.print('-');
+    dataFile.print(utcMonth);
+    dataFile.print('-');
+    dataFile.print(utcDay);
+    dataFile.print('T');
+    if(utcHour < 10) dataFile.print('0');
+    dataFile.print(utcHour);
+    dataFile.print(':') ;
+    if(utcMinute < 10) dataFile.print('0');
+    dataFile.print(utcMinute);
+    dataFile.print(':');
+    if(utcSecond < 10) dataFile.print('0');
+    dataFile.print(utcSecond);
+    dataFile.print("+00:00");
     dataFile.print(",");
     dataFile.print(PM1p0_atm); // PM1.0 (atmo)
     dataFile.print(",");
