@@ -1192,6 +1192,55 @@ void createDataFiles()
   Serial.print("metaFileName: ");
   Serial.println(metaFileName);
   #endif
+  
+  File newFile;
+
+  // Create column headers for new data file
+  if(!SD.exists(dataFileName))
+  {
+    #ifdef DEBUG_PRINT
+    Serial.println("Writing column headers for new data file");
+    #endif
+    newFile = SD.open(dataFileName, FILE_WRITE);
+    if(newFile)
+    {
+      #ifdef DEBUG_PRINT
+      Serial.print("ms,UTC_timestamp,PM1.0,PM2.5,PM10.0,0.3um,0.5um,1.0um,2.5um,5.0um,10.0um");
+      #endif
+      newFile.print("ms,UTC_timestamp,PM1.0,PM2.5,PM10.0,0.3um,0.5um,1.0um,2.5um,5.0um,10.0um\n");
+    }
+    else 
+    {
+      #ifdef DEBUG_PRINT
+      Serial.println("Couldn't open data file");
+      #endif
+    }
+    newFile.close();
+  }
+
+  // Create column headers for new data file
+  if(!SD.exists(metaFileName))
+  {
+    #ifdef DEBUG_PRINT
+    Serial.println("Writing column headers for new data file");
+    #endif
+    newFile = SD.open(metaFileName, FILE_WRITE);
+    if(newFile)
+    {
+      #ifdef DEBUG_PRINT
+      Serial.print("ms,UTC_timestamp,PM1.0,PM2.5,PM10.0,0.3um,0.5um,1.0um,2.5um,5.0um,10.0um");
+      #endif
+      newFile.print("ms,UTC_timestamp,latitude,longitude,altitude,temperature,pressure\n");
+    }
+    else 
+    {
+      #ifdef DEBUG_PRINT
+      Serial.println("Couldn't open data file");
+      #endif
+    }
+    newFile.close();
+  }
+
   // collect data and go to data collection screen
   prevState = state;
   state = 2;
