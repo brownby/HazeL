@@ -154,9 +154,9 @@ The HM3301 is the dust sensor used in HazeL. It returns the following data, all 
 
 |Datum|Units|
 |:---:|:---:|
-|PM1.0 (standard)|&#956;g/m<sup>3</sup>|
-|PM2.5 (standard)|&#956;g/m<sup>3</sup>|
-|PM10.0 (standard)|&#956;g/m<sup>3</sup>|
+|PM1.0 (standard)&#8224;|&#956;g/m<sup>3</sup>|
+|PM2.5 (standard)&#8224;|&#956;g/m<sup>3</sup>|
+|PM10.0 (standard)&#8224;|&#956;g/m<sup>3</sup>|
 |PM1.0 (atmospheric)|&#956;g/m<sup>3</sup>|
 |PM2.5 (atmospheric)|&#956;g/m<sup>3</sup>|
 |PM10.0 (atmospheric)|&#956;g/m<sup>3</sup>|
@@ -164,12 +164,14 @@ The HM3301 is the dust sensor used in HazeL. It returns the following data, all 
 |>0.5 &#956;m|Particle count/0.1L|
 |>1.0 &#956;m|Particle count/0.1L|
 |>2.5 &#956;m|Particle count/0.1L|
-|>5.0 &#956;m|Particle count/0.1L|
+|>5.0 &#956;m|Particle count/0.1L|nmjjjjjjjjjjjjjjjjjjjjjjjjj
 |>10.0 &#956;m|Particle count/0.1L|
 
 The HM3301 communicates with the Arduino over I2C, using a custom library written for HazeL (see [HM3301.cpp](src/HM3301.cpp) and [HM3301.h](include/HM3301.h)).
 
 It should be mounted to the outside of the enclosure, with sufficient clearance to allow for unobstructed airflow into the inlet.
+
+&#8224;These data are not saved to the SD card in the current version of HazeL.
 
 ### [BMP280 temperature and pressure sensor](https://www.seeedstudio.com/Grove-Barometer-Sensor-BMP280.html)
 
