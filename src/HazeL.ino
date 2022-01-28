@@ -1,14 +1,6 @@
 /*
  * HazeL
  * Benjamin Y. Brown
- * 
- * Creates a file called "data.txt" on the SD card 
- * Writes PM and raw concentration data every 2.5s to the SD card
- *
- * When button is pressed, HazeL will upload the contents of the SD card through the serial port
- * To upload the entirety of data.txt, pull SWITCH_PIN high
- * To upload incrementally (only upload data collected since the last incremental upload), pull SWITCH_PIN low
- * 
  */
 
 #include <SPI.h>
