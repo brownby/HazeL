@@ -178,7 +178,7 @@ The Air530 is low-cost GPS module that comes with a small antenna. It communicat
 
 ### [SSD1327 OLED display](https://www.adafruit.com/product/4741)
 
-<img width="400" src="img/ssd1315.jpg" alt="SSD1315 OLED display">
+<img width="400" src="img/ssd1327.jpg" alt="SSD1327 OLED display">
 
 The SSD1327 is a 1.5" 128x128 grayscale OLED display. The display is used to display data to the user, as well as menus for users to navigate. The OLED communicates over I2C using the [Adafruit_SSD1327 library](https://github.com/adafruit/Adafruit_SSD1327).
 
