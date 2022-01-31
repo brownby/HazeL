@@ -62,15 +62,13 @@ YYMMDD_HHMMSS_data.txt
 YYMMDD_HHMMSS_meta.txt
 ```
 
-Every 2.5 seconds, particulate matter data are collected from the dust sensor and saved in the `data` file. For the list of data that are collected and saved, see the [HM3301 dust sensor section](#hm3301-dust-sensor) below.
+Every 2.5 seconds, particulate matter data are collected from the dust sensor and saved in the `data` file. For the list of data that are collected and saved, see the [HM3301 dust sensor section](#hm3301-dust-sensor) below. Each line of the `data` file also starts with the number of milliseconds elapsed since data collection began as well as an ISO8601 UTC timestamp.
 
 Every 10 seconds, a line of metadata is stored in the `meta` file. One line of metadata includes: 
 ```
-ISO8601 UTC timestamp, latitude, longitude, altitude, temperature in degrees C, pressure in pascals
+ms timer, ISO8601 UTC timestamp, latitude, longitude, altitude, temperature in degrees C, pressure in pascals
 ```
-If the RTC is being used for timestamps (i.e. if `Manual` was selected), the latitude, longitude, and altitude entries will be empty. The RTC will also be used if you selected `Auto (GPS)`, but only in cases where a GPS read takes longer than 5 seconds.
-
-Every line (in both the `data` and `meta` files) begins with the number of ms elapsed since data collection began, to allow for syncing the two files while processing data. 
+If the RTC is being used for timestamps (i.e. if `Manual` was selected), the latitude, longitude, and altitude entries will be empty. The RTC will also be used if you selected `Auto (GPS)`, but only in cases where a GPS read takes longer than 5 seconds. The `ms timer` value is the number of milliseconds elapsed since data collection began. This value, as well as the timestamp, will match on a line where both data and metadata are collected, allowing for synchronization of the two files. 
 
 As data are being saved the SD card, they are also being sent over USB to allow for capturing a livestream of data. Livestreamed metadata lines begin with a `#` to differentiate them from data. 
 
