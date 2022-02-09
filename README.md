@@ -70,9 +70,9 @@ ms timer, ISO8601 UTC timestamp, latitude, longitude, altitude, temperature in d
 ```
 If the RTC is being used for timestamps (i.e. if `Manual` was selected), the `latitude`, `longitude`, and `altitude` entries will be empty. The RTC may also be used if you selected `Auto (GPS)`, but only in cases where a GPS read takes longer than 5 seconds. The `ms timer` value is the number of milliseconds elapsed since data collection began. This value, as well as the timestamp, will match on a line where both data and metadata are collected, allowing for synchronization of the two files in post-processing. 
 
-As data are being saved the SD card, they are also being sent over USB to allow for capturing a livestream of data. Livestreamed metadata lines begin with a `#` to differentiate them from data. 
+As data are being saved to the SD card, they are also being sent over USB to allow for capturing a livestream of data. Livestreamed metadata lines begin with a `#` to differentiate them from data. 
 
-The OLED display will also show data as its collected, specifically the count/0.1L of >0.3um particles. The current date and time (in UTC) are shown at the bottom of the display, as well as the source of the timestamp (either `RTC` or `GPS`):
+The OLED display will also show data as it is collected, specifically the count/0.1L of >0.3um particles. The current date and time (in UTC) are shown at the bottom of the display, as well as the source of the timestamp (either `RTC` or `GPS`):
 
 ```
 >0.3um:
