@@ -72,7 +72,7 @@ If the RTC is being used for timestamps (i.e. if `Manual` was selected), the `la
 
 As data are being saved to the SD card, they are also being sent over USB to allow for capturing a livestream of data. Livestreamed metadata lines begin with a `#` to differentiate them from data. 
 
-The OLED display will also show data as it is collected, specifically the count/0.1L of >0.3um particles. The current date and time (in UTC) are shown at the bottom of the display, as well as the source of the timestamp (either `RTC` or `GPS`):
+The OLED display will also show data as it is collected, specifically the PM2.5 concentration in &mu;g/m<sup>3</sup>. The current date and time (in UTC) are shown at the bottom of the display, as well as the source of the timestamp (either `RTC` or `GPS`):
 
 ```
 PM2.5:
