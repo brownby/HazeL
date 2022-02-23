@@ -33,7 +33,7 @@ do {
     # now set a timeout for reads, so that end of file can be detected
     $port.ReadTimeout = 500
 
-    $outbuffer = [System.Collections.ArrayList]@()
+    # $outbuffer = [System.Collections.ArrayList]@()
 
     Write-Host "Reading data from HazeL..."
 
@@ -53,9 +53,10 @@ do {
         # Every dot means 100 lines of data have been read
         if($numlines % 100 -eq 0) {Write-Host -NoNewline "."}
         if($numlines % (25*100) -eq 0) {Write-Host ""}
-        $outbuffer.Add("$line`n") > $null
+        # $outbuffer.Add("$line`n") > $null
+        Add-Content -Path (Force-Resolve-Path $file) -Value "$line`n" -NoNewline
     }
-    Add-Content -Path (Force-Resolve-Path $file) -Value $outbuffer -NoNewline
+    # Add-Content -Path (Force-Resolve-Path $file) -Value $outbuffer -NoNewline
     Write-Host "Done writing data to $file`n`nReady to download next file"
     $port.ReadTimeout = -1
 }
