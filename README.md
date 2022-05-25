@@ -194,7 +194,7 @@ The Grove I2C hub was used to connect the I2C devices (dust sensor, T+P sensor, 
 
 These encoders are used as the knobs and buttons to interact with HazeL. They are mounted on a custom PCB. 
 
-# The Meaning of HazeL
+# The Meaning of "HazeL"
 
 HazeL is named after Hazel the cat, shown below, who is a very good girl. (It can also mean Haze Laser sensor, but we all know it was for the cat). 
 
