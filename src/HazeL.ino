@@ -226,9 +226,34 @@ void loop() {
     updateMenuSelection();
 
     // Check for serial commands
+    String cmd = "";
     while (Serial.available() > 0)
     {
+      char c = Serial.read();
+      // End of command
+      if (c == '\n')
+      {
+        // Send list of files
+        if (cmd == "ls")
+        {
+          getFileList();
+          char allFiles[fileCount][30];
+          memcpy(allFiles, fileList, sizeof(allFiles));
 
+          for (int i = 0; i < fileCount; i++)
+          {
+            Serial.print(allFiles[i]);
+            Serial.print('\n');
+          }
+          Serial.print('\0');
+
+          free(fileList);
+        }
+      }
+      else
+      {
+        cmd += c;
+      }
     }
 
     if(encRightButtonFlag) // select button has been pressed
