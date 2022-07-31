@@ -226,33 +226,75 @@ void loop() {
     updateMenuSelection();
 
     // Check for serial commands
-    String cmd = "";
+    String msg = "";
     while (Serial.available() > 0)
     {
       char c = Serial.read();
       // End of command
       if (c == '\n')
       {
+        String cmd = String(msg[0]) + String(msg[1]);
+
+        // Get list of all files
+        getFileList();
+        char allFiles[fileCount][30];
+        memcpy(allFiles, fileList, sizeof(allFiles));
+
         // Send list of files
         if (cmd == "ls")
         {
-          getFileList();
-          char allFiles[fileCount][30];
-          memcpy(allFiles, fileList, sizeof(allFiles));
-
           for (int i = 0; i < fileCount; i++)
           {
             Serial.print(allFiles[i]);
             Serial.print('\n');
           }
           Serial.print('\x04');
-
-          free(fileList);
         }
+        // Download files
+        else if (cmd == "dl")
+        {
+          // Remove command and space from the msg string
+          msg = msg.substring(3);
+
+          // Create an array for storing all the files in the argument
+          char filesToDownload[fileCount][30];
+          String fileName = "";
+          uint32_t downloadCount = 0;
+          int i = 0;
+
+          // Construct array of files to download
+          while (i < msg.length())
+          {
+            // Encountered a space, add fileName to array
+            if (msg[i] == ' ' || msg[i] == '\n')
+            {
+              strcpy(filesToDownload[downloadCount], fileName.c_str());
+
+              downloadCount++;
+
+              // Reset fileName
+              fileName = "";
+            }
+            else
+            {
+              fileName += msg[i];
+            }
+          }
+
+          // Upload each file one by one, terminate with end ETX character
+          for (int i = 0; i < downloadCount; i++)
+          {
+            uploadSerial(filesToDownload[i]);
+            Serial.print('\x03');
+          }
+          Serial.print('\x04');
+        }
+
+        free(fileList);
       }
       else
       {
-        cmd += c;
+        msg += c;
       }
     }
 
@@ -374,6 +416,8 @@ void loop() {
   }
   else if(state == 3) // uploading data
   {
+    Serial.print(fileToUpload);
+    Serial.print(".txt\n");
     uploadSerial(fileToUpload);
     state = prevState;
     prevState = 3;
@@ -845,8 +889,8 @@ void uploadSerial(char * fileName)
   Serial.println("Serial upload initiated");
   Serial.print("Uploading: ");
   #endif
-  // Send file name as first line to be captured, download scripts will use this to name the file
-  Serial.print(fileNameExtension); Serial.print('\n');
+  // Not sending file name at top of file anymore, do this explicitly when it's sent via the upload menu to maintain backwards compatibility
+  // Serial.print(fileNameExtension); Serial.print('\n');
 
   File file = SD.open(fileNameExtension, FILE_READ);
   while(file.available())
