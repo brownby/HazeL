@@ -316,10 +316,6 @@ void loop() {
 
         free(fileList);
       }
-      // else
-      // {
-      //   msg += c;
-      // }
     }
 
     if(encRightButtonFlag) // select button has been pressed
