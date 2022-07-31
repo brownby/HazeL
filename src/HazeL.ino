@@ -230,6 +230,7 @@ void loop() {
     while (Serial.available() > 0)
     {
       char c = Serial.read();
+      msg += c;
       // End of command
       if (c == '\n')
       {
@@ -243,6 +244,9 @@ void loop() {
         // Send list of files
         if (cmd == "ls")
         {
+          #ifdef DEBUG_PRINT
+          Serial.println("ls command");
+          #endif
           for (int i = 0; i < fileCount; i++)
           {
             Serial.print(allFiles[i]);
@@ -253,8 +257,16 @@ void loop() {
         // Download files
         else if (cmd == "dl")
         {
+          #ifdef DEBUG_PRINT
+          Serial.println("dl command");
+          #endif
+
           // Remove command and space from the msg string
           msg = msg.substring(3);
+
+          #ifdef DEBUG_PRINT
+          Serial.print("dl args: "); Serial.println(msg);
+          #endif
 
           // Create an array for storing all the files in the argument
           char filesToDownload[fileCount][30];
@@ -268,6 +280,10 @@ void loop() {
             // Encountered a space, add fileName to array
             if (msg[i] == ' ' || msg[i] == '\n')
             {
+              #ifdef DEBUG_PRINT
+              Serial.print("fileName: "); Serial.println(fileName);
+              #endif
+
               strcpy(filesToDownload[downloadCount], fileName.c_str());
 
               downloadCount++;
@@ -279,11 +295,19 @@ void loop() {
             {
               fileName += msg[i];
             }
+            i++;
           }
+          #ifdef DEBUG_PRINT
+          Serial.print("downloadCount: "); Serial.println(downloadCount);
+          #endif
 
           // Upload each file one by one, terminate with end ETX character
           for (int i = 0; i < downloadCount; i++)
           {
+            #ifdef DEBUG_PRINT
+            Serial.print("Uploading file: "); Serial.println(filesToDownload[i]);
+            #endif
+
             uploadSerial(filesToDownload[i]);
             Serial.print('\x03');
           }
@@ -292,10 +316,10 @@ void loop() {
 
         free(fileList);
       }
-      else
-      {
-        msg += c;
-      }
+      // else
+      // {
+      //   msg += c;
+      // }
     }
 
     if(encRightButtonFlag) // select button has been pressed
