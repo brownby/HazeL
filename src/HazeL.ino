@@ -245,7 +245,7 @@ void loop() {
             Serial.print(allFiles[i]);
             Serial.print('\n');
           }
-          Serial.print('\0');
+          Serial.print('\x04');
 
           free(fileList);
         }
