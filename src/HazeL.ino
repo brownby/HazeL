@@ -308,7 +308,7 @@ void loop() {
             Serial.print("Uploading file: "); Serial.println(filesToDownload[i]);
             #endif
 
-            uploadSerial(filesToDownload[i]);
+            uploadSerial(filesToDownload[i], 100);
             Serial.print('\x03');
           }
           Serial.print('\x04');
@@ -438,7 +438,7 @@ void loop() {
   {
     Serial.print(fileToUpload);
     Serial.print(".txt\n");
-    uploadSerial(fileToUpload);
+    uploadSerial(fileToUpload, 2500);
     state = prevState;
     prevState = 3;
     page = 4; // go back to file list
@@ -888,7 +888,7 @@ void updateSampleSD()
 }
 
 // upload SD card data over serial port
-void uploadSerial(char * fileName)
+void uploadSerial(char * fileName, uint32_t wait)
 {
   // disable button ISRs
   encRightButtonISREn = false; 
@@ -930,7 +930,7 @@ void uploadSerial(char * fileName)
     memset(buffer, 0, sizeof(buffer));
   }
   file.close();
-  delay(2500);
+  delay(wait);
   
   encRightButtonISREn = true;
   encLeftButtonISREn = true;
