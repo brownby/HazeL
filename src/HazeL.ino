@@ -237,8 +237,11 @@ void loop() {
       {
         String cmd = String(msg[0]) + String(msg[1]);
 
-        // Get list of all files
-        getFileList();
+        // Get list of all files, if not already created
+        if (!fileListAlloc)
+        {
+          getFileList();
+        }
         char allFiles[fileCount][30];
         memcpy(allFiles, fileList, sizeof(allFiles));
 
@@ -315,8 +318,12 @@ void loop() {
           Serial.print('\x04');
         }
 
-        free(fileList);
-        fileListAlloc = false;
+        // If we're currently on the page for viewing the files on the SD, don't free() fileList
+        if (page != 4)
+        {
+          free(fileList);
+          fileListAlloc = false;
+        }
       }
     }
 
@@ -339,7 +346,11 @@ void loop() {
           Serial.println();
           #endif
 
-          getFileList();
+          // Create file list, if not already created
+          if (!fileListAlloc)
+          {
+            getFileList();
+          }
         }
       }
       else if (page == 1) // time entry method
@@ -1848,6 +1859,7 @@ int cmpstr(void const *a, void const *b)
 void getFileList()
 {
   // Free fileList if it's malloc'd
+  // (this should never be the case, but just to be sure)
   if (fileListAlloc)
   {
     free(fileList);
