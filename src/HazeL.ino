@@ -48,6 +48,7 @@ File metaFile;
 char dataFileName[23]; // YYMMDD_HHMMSS_data.txt
 char metaFileName[23]; // YYMMDD_HHMMSS_meta.txt
 char * fileList; // list of files on SD card
+bool fileListAlloc = false; // variable for tracking if fileList is malloc'd to avoid memory leaks
 uint32_t fileCount = 0; // number of files on SD card
 char fileToUpload[30];
 
@@ -315,6 +316,7 @@ void loop() {
         }
 
         free(fileList);
+        fileListAlloc = false;
       }
     }
 
@@ -471,6 +473,7 @@ void loop() {
         Serial.println("free()'ing fileList");
         #endif
         free(fileList); // deallocate memory for list of SD card files
+        fileListAlloc = false;
         scroll = 0;
         break;
       case 5: // data collection screen
@@ -1844,84 +1847,92 @@ int cmpstr(void const *a, void const *b)
 
 void getFileList()
 {
+  // Free fileList if it's malloc'd
+  if (fileListAlloc)
+  {
+    free(fileList);
+    fileListAlloc = false;
+  }
+
   // First count files on SD card
-          #ifdef DEBUG_PRINT
-          Serial.println("\nCounting files on SD card");
-          #endif
-          File file;
-          File root;
-          fileCount = 0;
-          if(!root.open("/"))
-          {
-            #ifdef DEBUG_PRINT
-            Serial.println("Error opening root");
-            #endif
-            // TODO: figure out how to handle this error
-          }
-          while(file.openNext(&root, O_RDONLY))
-          {
-            if(!file.isHidden())
-            {
-              fileCount++;
-              #ifdef DEBUG_PRINT
-              file.printName(&Serial);
-              Serial.print('\t');
-              Serial.println(fileCount);
-              #endif
-            }
-            file.close();
-          }
-          root.rewind();
+  #ifdef DEBUG_PRINT
+  Serial.println("\nCounting files on SD card");
+  #endif
+  File file;
+  File root;
+  fileCount = 0;
+  if(!root.open("/"))
+  {
+    #ifdef DEBUG_PRINT
+    Serial.println("Error opening root");
+    #endif
+    // TODO: figure out how to handle this error
+  }
+  while(file.openNext(&root, O_RDONLY))
+  {
+    if(!file.isHidden())
+    {
+      fileCount++;
+      #ifdef DEBUG_PRINT
+      file.printName(&Serial);
+      Serial.print('\t');
+      Serial.println(fileCount);
+      #endif
+    }
+    file.close();
+  }
+  root.rewind();
 
-          #ifdef DEBUG_PRINT
-          Serial.print("\nFile count: ");
-          Serial.println(fileCount);
-          #endif
+  #ifdef DEBUG_PRINT
+  Serial.print("\nFile count: ");
+  Serial.println(fileCount);
+  #endif
 
-          // now create an array of file names
-          char filesOnSd[fileCount][30]; // Each file name should be at most 22 characters long
-          uint32_t curFile = 0;
-          while(file.openNext(&root, O_RDONLY))
-          {
-            if(!file.isHidden())
-            {
-              char fileName[30] = {0};
-              file.getName(fileName, sizeof(fileName));
-              char shortenedFileName[30] = {0};
-              memcpy(shortenedFileName, fileName, strlen(fileName) - 4); // everything but the file extension ".txt" (to fit on screen)
-              strcpy(filesOnSd[curFile], shortenedFileName);
-              curFile++;
-            }
-            file.close();
-          }
-          root.rewind();
+  // now create an array of file names
+  char filesOnSd[fileCount][30]; // Each file name should be at most 22 characters long
+  uint32_t curFile = 0;
+  while(file.openNext(&root, O_RDONLY))
+  {
+    if(!file.isHidden())
+    {
+      char fileName[30] = {0};
+      file.getName(fileName, sizeof(fileName));
+      char shortenedFileName[30] = {0};
+      memcpy(shortenedFileName, fileName, strlen(fileName) - 4); // everything but the file extension ".txt" (to fit on screen)
+      strcpy(filesOnSd[curFile], shortenedFileName);
+      curFile++;
+    }
+    file.close();
+  }
+  root.rewind();
 
-          #ifdef DEBUG_PRINT
-          Serial.println("\nList of files created (pre-sort):");
-          for(int i = 0; i < fileCount; ++i)
-          {
-            Serial.println(filesOnSd[i]);
-          }
-          #endif
+  #ifdef DEBUG_PRINT
+  Serial.println("\nList of files created (pre-sort):");
+  for(int i = 0; i < fileCount; ++i)
+  {
+    Serial.println(filesOnSd[i]);
+  }
+  #endif
 
-          // Sort filesOnSd alphabetically
-          qsort(filesOnSd, fileCount, 30, cmpstr);
+  // Sort filesOnSd alphabetically
+  qsort(filesOnSd, fileCount, 30, cmpstr);
 
-          #ifdef DEBUG_PRINT
-          Serial.println("\nList of files created:");
-          for(int i = 0; i < fileCount; ++i)
-          {
-            Serial.println(filesOnSd[i]);
-          }
-          #endif
+  #ifdef DEBUG_PRINT
+  Serial.println("\nList of files created:");
+  for(int i = 0; i < fileCount; ++i)
+  {
+    Serial.println(filesOnSd[i]);
+  }
+  #endif
 
-          root.close();
+  root.close();
 
-          // copy contents fo fileList memory location
-          // free()'d when the upload menu is left with the back button
-          // free()'d when file list is sent over serial
-          fileList = (char *)malloc(sizeof(filesOnSd));
-          memcpy(fileList, filesOnSd, sizeof(filesOnSd));
+  // copy contents fo fileList memory location
+  // free()'d when the upload menu is left with the back button
+  // free()'d when file list is sent over serial
+  fileList = (char *)malloc(sizeof(filesOnSd));
+  memcpy(fileList, filesOnSd, sizeof(filesOnSd));
+  fileListAlloc = true;
 }
 
 /*
