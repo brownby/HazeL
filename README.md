@@ -100,6 +100,12 @@ The RTC is synced to the GPS on every successful GPS read. When a GPS read is un
 
 ## Uploading data
 
+### Using the [HazeL Data Downloader](https://hazeldownload.com/) (preferred)
+
+Go to [hazeldownload.com](https://hazeldownload.com/) and follow the directions there to connect your device. The Downloader will then show a list of all the files on the SD card, and you can select the ones you would like to download and click `Download`. That's it!
+
+### Using [Scripts](scripts)
+
 When you select `Upload data`, a new menu will appear with a list of all of the data and metadata files stored on the SD card in reverse chronological order. For example, if you collected data three times on `1/13/22`, once at `9:24:29`, once at `13:40:12`, and once at `18:08:57`, the screen would look like this:
 
 ```
@@ -193,6 +199,18 @@ The Grove I2C hub was used to connect the I2C devices (dust sensor, T+P sensor, 
 <img width="400" src="img/encoder.jpg" alt="Rotary encoder">
 
 These encoders are used as the knobs and buttons to interact with HazeL. They are mounted on a custom PCB. 
+
+# Serial Commands
+
+**New with HazeL 3.0!**
+
+HazeL will now respond to two serial commands:
+
+`ls` - HazeL will respond with a list of all files on the SD card, followed by an [`EOT` character](https://en.wikipedia.org/wiki/End-of-Transmission_character)
+
+`dl <filename1> <filename2> ...` - HazeL will send the contents of each `filename` send to it, one-by-one. Each file will end with an [`ETX` character](https://en.wikipedia.org/wiki/End-of-Text_character), and once all the files are sent HazeL will send an `EOT` character.
+
+These serial commands are what enables the [HazeL Data Downloader](https://hazeldownload.com/) to operate.
 
 # The Meaning of "HazeL"
 
