@@ -732,16 +732,16 @@ void updateSampleSD()
       else
       {
         Serial.print(',');
-        Serial.print(latitude);
+        Serial.print(latitude, 5);
         Serial.print(',');
-        Serial.print(longitude);
+        Serial.print(longitude, 5);
         Serial.print(',');
         Serial.print(altitude);
 
         metaFile.print(',');
-        metaFile.print(latitude);
+        metaFile.print(latitude, 5);
         metaFile.print(',');
-        metaFile.print(longitude);
+        metaFile.print(longitude, 5);
         metaFile.print(',');
         metaFile.print(altitude);
       }
