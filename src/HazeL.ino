@@ -5,7 +5,6 @@
 
 #include <SPI.h>
 #include <Wire.h>
-#include "HM3301.h"
 
 // Make sure you have these five libraries installed in Documents/Arduino/libraries
 #include <Adafruit_I2CDevice.h>
@@ -17,6 +16,7 @@
 #include <TimeLib.h>
 #include <RTCZero.h>
 #include "Seeed_BMP280.h"
+#include "Adafruit_PM25AQI.h"
 
 #define SAMP_TIME 2500 // number of ms between sensor readings
 #define BLINK_TIME 30 // time in ms between LED blinks on successful write to SD
@@ -37,9 +37,10 @@
 #define ENC_LEFT_A 5
 #define ENC_LEFT_B 7
 #define MENU_UPDATE_TIME 100 // milliseconds between menu updates
-// #define DEBUG_PRINT
+#define DEBUG_PRINT
 
-HM3301 dustSensor;
+Adafruit_PM25AQI dustSensor = Adafruit_PM25AQI();
+PM25_AQI_Data pmData;
 BMP280 TPSensor;
 
 SdFat SD;
@@ -179,7 +180,7 @@ void setup() {
   delay(2500);
 
   // Initialize dust sensor
-  if(!dustSensor.begin())
+  if(!dustSensor.begin_I2C())
   {
     #ifdef DEBUG_PRINT
     Serial.println("Failed to initialize dust sensor");
@@ -771,25 +772,25 @@ void updateSampleSD()
   }
   
   // Read dust sensor
-  while(!dustSensor.read())
+  while(!dustSensor.read(&pmData))
   {
     #ifdef DEBUG_PRINT
     Serial.println("Sensor reading didn't work, trying again");
     #endif
   }
 
-  uint16_t PM1p0_std = dustSensor.data.PM1p0_std;
-  uint16_t PM2p5_std = dustSensor.data.PM2p5_std;
-  uint16_t PM10p0_std = dustSensor.data.PM10p0_std;
-  uint16_t PM1p0_atm = dustSensor.data.PM1p0_atm;
-  uint16_t PM2p5_atm = dustSensor.data.PM2p5_atm;
-  uint16_t PM10p0_atm = dustSensor.data.PM10p0_atm;
-  uint16_t count_0p3um = dustSensor.data.count_0p3um;
-  uint16_t count_0p5um = dustSensor.data.count_0p5um;
-  uint16_t count_1p0um = dustSensor.data.count_1p0um;
-  uint16_t count_2p5um = dustSensor.data.count_2p5um;
-  uint16_t count_5p0um = dustSensor.data.count_5p0um;
-  uint16_t count_10p0um = dustSensor.data.count_10p0um;
+  uint16_t PM1p0_std = pmData.pm10_standard;
+  uint16_t PM2p5_std = pmData.pm25_standard;
+  uint16_t PM10p0_std = pmData.pm100_standard;
+  uint16_t PM1p0_atm = pmData.pm10_env;
+  uint16_t PM2p5_atm = pmData.pm25_env;
+  uint16_t PM10p0_atm = pmData.pm100_env;
+  uint16_t count_0p3um = pmData.particles_03um;
+  uint16_t count_0p5um = pmData.particles_05um;
+  uint16_t count_1p0um = pmData.particles_10um;
+  uint16_t count_2p5um = pmData.particles_25um;
+  uint16_t count_5p0um = pmData.particles_50um;
+  uint16_t count_10p0um = pmData.particles_100um;
 
   // Display data to serial monitor and OLED display
   // Store data on SD card
@@ -1742,18 +1743,18 @@ void displayPage(uint8_t page)
     }
     case(5): // Data collection
     {
-      // uint16_t PM1p0_std = dustSensor.data.PM1p0_std;
-      // uint16_t PM2p5_std = dustSensor.data.PM2p5_std;
-      // uint16_t PM10p0_std = dustSensor.data.PM10p0_std;
-      // uint16_t PM1p0_atm = dustSensor.data.PM1p0_atm;
-      // uint16_t PM2p5_atm = dustSensor.data.PM2p5_atm;
-      // uint16_t PM10p0_atm = dustSensor.data.PM10p0_atm;
-      uint16_t count_0p3um = dustSensor.data.count_0p3um;
-      // uint16_t count_0p5um = dustSensor.data.count_0p5um;
-      // uint16_t count_1p0um = dustSensor.data.count_1p0um;
-      // uint16_t count_2p5um = dustSensor.data.count_2p5um;
-      // uint16_t count_5p0um = dustSensor.data.count_5p0um;
-      // uint16_t count_10p0um = dustSensor.data.count_10p0um;
+      // uint16_t PM1p0_std = pmData.pm10_standard;
+      // uint16_t PM2p5_std = pmData.pm25_standard;
+      // uint16_t PM10p0_std = pmData.pm100_standard;
+      // uint16_t PM1p0_atm = pmData.pm10_env;
+      // uint16_t PM2p5_atm = pmData.pm25_env;
+      // uint16_t PM10p0_atm = pmData.pm100_env;
+      uint16_t count_0p3um = pmData.particles_03um;
+      // uint16_t count_0p5um = pmData.particles_05um;
+      // uint16_t count_1p0um = pmData.particles_10um;
+      // uint16_t count_2p5um = pmData.particles_25um;
+      // uint16_t count_5p0um = pmData.particles_50um;
+      // uint16_t count_10p0um = pmData.particles_100um;
 
       char timeText[50];
       // char pm1p0Text[10];
