@@ -25,7 +25,7 @@
 #define GPS_FIRST_TIMEOUT 600000 // number of ms before first GPS read times out
 #define BLINK_CNT 3 // number of times to blink LED on successful write
 #define SD_CS_PIN 4 // CS pin of SD card, 4 on SD MKR proto shield
-#define CUR_YEAR 2023 // for GPS first fix error checking
+#define CUR_YEAR 2024 // for GPS first fix error checking
 #define OLED_RESET -1
 #define SCREEN_ADDRESS 0x3D
 #define SCREEN_WIDTH 128
