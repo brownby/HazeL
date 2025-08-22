@@ -5,8 +5,9 @@
 
 #include <SPI.h>
 #include <Wire.h>
+#include <wiring_private.h>
 
-// Make sure you have these five libraries installed in Documents/Arduino/libraries
+// Make sure you have these libraries installed in Documents/Arduino/libraries
 #include <Adafruit_I2CDevice.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1327.h>
@@ -17,6 +18,7 @@
 #include <RTCZero.h>
 #include "Seeed_BMP280.h"
 #include "Adafruit_PM25AQI.h"
+#include "s8_uart.h"
 
 #define DISPLAY_DATA_COUNT 7 // number of most recent points to be displayed during data collection
 #define BLINK_TIME 30 // time in ms between LED blinks on successful write to SD
@@ -36,6 +38,8 @@
 #define ENC_LEFT_BUTTON A2
 #define ENC_LEFT_A 5
 #define ENC_LEFT_B 7
+#define CO2_TX 2 // Tx for CO2 sensor UART
+#define CO2_RX 3 // Rx for CO2 sensor UART
 #define MENU_UPDATE_TIME 100 // milliseconds between menu updates
 // #define DEBUG_PRINT
 
@@ -75,6 +79,15 @@ uint8_t blockCount = 0;
 bool dataDisplayFlag = false;
 
 BMP280 TPSensor;
+
+Uart SerialCO2(&sercom0, 3, 2, SERCOM_RX_PAD_3, UART_TX_PAD_2);
+void SERCOM0_Handler()
+{
+    SerialCO2.IrqHandler();
+}
+
+S8_UART *co2Sensor_uart;
+S8_sensor co2Sensor;
 
 SdFat SD;
 File dataFile;
@@ -223,6 +236,25 @@ void setup() {
     #endif
     display.clearDisplay();
     updateDisplay("Dust sensor init failed", 32, false);
+    updateDisplay("Reset device", 48, false);
+    display.display();
+    while(true);
+  }
+
+    // initialize comms with CO2 sensor
+  SerialCO2.begin(9600);
+  pinPeripheral(2, PIO_SERCOM);
+  pinPeripheral(3, PIO_SERCOM);
+  co2Sensor_uart = new S8_UART(SerialCO2);
+  co2Sensor_uart->get_firmware_version(co2Sensor.firm_version);
+  int len = strlen(co2Sensor.firm_version);
+  if (len == 0)
+  {
+    #ifdef DEBUG_PRINT
+    Serial.println("Failed to initialize dust sensor");
+    #endif
+    display.clearDisplay();
+    updateDisplay("CO2 sensor init failed", 32, false);
     updateDisplay("Reset device", 48, false);
     display.display();
     while(true);
