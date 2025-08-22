@@ -88,6 +88,7 @@ void SERCOM0_Handler()
 
 S8_UART *co2Sensor_uart;
 S8_sensor co2Sensor;
+uint32_t co2Avg;
 
 SdFat SD;
 File dataFile;
@@ -259,6 +260,7 @@ void setup() {
     display.display();
     while(true);
   }
+  co2Avg = 0;
 
   TPSensor.init();
 
@@ -879,6 +881,10 @@ void updateSampleSD()
   pmDataAvg.particles_50um += pmDataRaw.particles_50um;
   pmDataAvg.particles_100um += pmDataRaw.particles_100um;
 
+  // Read CO2 sensor
+  co2Sensor.co2 = co2Sensor_uart->get_co2();
+  co2Avg += co2Sensor.co2;
+
   if (blockCount == blockSize) // average and report data
   {
 
@@ -894,6 +900,7 @@ void updateSampleSD()
     pmDataAvg.particles_25um /= blockSize;
     pmDataAvg.particles_50um /= blockSize;
     pmDataAvg.particles_100um /= blockSize;
+    co2Avg /= blockSize;
 
     // update array of recent data points (this is a bit hacky)
 
@@ -958,7 +965,9 @@ void updateSampleSD()
       Serial.print(',');
       Serial.print(pmDataAvg.particles_50um);
       Serial.print(',');
-      Serial.println(pmDataAvg.particles_100um);
+      Serial.print(pmDataAvg.particles_100um);
+      Serial.print(',');
+      Serial.println(co2Avg);
 
       dataFile.print(msTimer);
       dataFile.print(',');
@@ -995,6 +1004,8 @@ void updateSampleSD()
       dataFile.print(pmDataAvg.particles_50um); // >5.0um
       dataFile.print(",");
       dataFile.print(pmDataAvg.particles_100um); // >10.0um
+      dataFile.print(",");
+      dataFile.print(co2Avg);
       dataFile.print('\n');
       dataFile.close();
 
@@ -1012,6 +1023,7 @@ void updateSampleSD()
       pmDataAvg.particles_25um = 0;
       pmDataAvg.particles_50um = 0;
       pmDataAvg.particles_100um = 0;
+      co2Avg = 0;
       dataDisplayFlag = true;
 
       ledFlag = true;
@@ -1365,9 +1377,9 @@ void createDataFiles()
     if(newFile)
     {
       #ifdef DEBUG_PRINT
-      Serial.print("ms,UTC_timestamp,PM1.0,PM2.5,PM10.0,0.3um,0.5um,1.0um,2.5um,5.0um,10.0um");
+      Serial.print("ms,UTC_timestamp,PM1.0,PM2.5,PM10.0,0.3um,0.5um,1.0um,2.5um,5.0um,10.0um,co2");
       #endif
-      newFile.print("ms,UTC_timestamp,PM1.0,PM2.5,PM10.0,0.3um,0.5um,1.0um,2.5um,5.0um,10.0um\n");
+      newFile.print("ms,UTC_timestamp,PM1.0,PM2.5,PM10.0,0.3um,0.5um,1.0um,2.5um,5.0um,10.0um,co2\n");
     }
     else 
     {
@@ -1388,7 +1400,7 @@ void createDataFiles()
     if(newFile)
     {
       #ifdef DEBUG_PRINT
-      Serial.print("ms,UTC_timestamp,PM1.0,PM2.5,PM10.0,0.3um,0.5um,1.0um,2.5um,5.0um,10.0um");
+      Serial.print("ms,UTC_timestamp,latitude,longitude,altitude,temperature,pressure");
       #endif
       newFile.print("ms,UTC_timestamp,latitude,longitude,altitude,temperature,pressure\n");
     }
