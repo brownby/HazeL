@@ -19,6 +19,7 @@
 #include "Seeed_BMP280.h"
 #include "Adafruit_PM25AQI.h"
 #include "s8_uart.h"
+#include <SensirionI2CSgp41.h>
 
 #define DISPLAY_DATA_COUNT 7 // number of most recent points to be displayed during data collection
 #define BLINK_TIME 30 // time in ms between LED blinks on successful write to SD
@@ -88,7 +89,13 @@ void SERCOM0_Handler()
 
 S8_UART *co2Sensor_uart;
 S8_sensor co2Sensor;
-uint32_t co2Avg;
+uint32_t co2Avg = 0;
+
+SensirionI2CSgp41 noxSensor;
+uint16_t defaultRh = 0x8000;
+uint16_t defaultT = 0x6666;
+uint32_t srawVocAvg = 0;
+uint32_t srawNoxAvg = 0;
 
 SdFat SD;
 File dataFile;
@@ -252,7 +259,7 @@ void setup() {
   if (len == 0)
   {
     #ifdef DEBUG_PRINT
-    Serial.println("Failed to initialize dust sensor");
+    Serial.println("Failed to initialize CO2 sensor");
     #endif
     display.clearDisplay();
     updateDisplay("CO2 sensor init failed", 32, false);
@@ -260,7 +267,41 @@ void setup() {
     display.display();
     while(true);
   }
-  co2Avg = 0;
+
+  // Initialize and condition NOx sensor
+  uint16_t condition_s = 10;
+  noxSensor.begin(Wire);
+  uint16_t noxSerialNum[3];
+  uint16_t error = noxSensor.getSerialNumber(noxSerialNum);
+  if (error)
+  {
+    #ifdef DEBUG_PRINT
+    Serial.println("Failed to initialize NOx sensor");
+    #endif
+    display.clearDisplay();
+    updateDisplay("NOx sensor init failed", 32, false);
+    updateDisplay("Reset device", 48, false);
+    display.display();
+    while(true);
+  }
+
+  display.clearDisplay();
+  updateDisplay("Warming NOx sensor...", 32, false);
+  display.display();
+
+  // Preheat sensor plate
+  uint16_t srawVoc;
+  uint16_t srawNox;
+  error = noxSensor.executeConditioning(defaultRh, defaultT, srawVoc);
+  if (error)
+  {
+    display.clearDisplay();
+    updateDisplay("Error conditioning NOx", 32, false);
+    display.display();
+  }
+  delay(condition_s*1000); // allow time to condition
+  noxSensor.measureRawSignals(defaultRh, defaultT, srawVoc, srawNox); // stop conditioning
+  
 
   TPSensor.init();
 
