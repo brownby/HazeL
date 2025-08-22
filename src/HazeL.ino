@@ -926,6 +926,14 @@ void updateSampleSD()
   co2Sensor.co2 = co2Sensor_uart->get_co2();
   co2Avg += co2Sensor.co2;
 
+  // Read NOx/VOC sensor
+  uint16_t srawNox  = 0;
+  uint16_t srawVoc = 0;
+  noxSensor.measureRawSignals(defaultRh, defaultT, srawVoc, srawNox);
+  srawNoxAvg += srawNox;
+  srawVocAvg += srawVoc;
+
+
   if (blockCount == blockSize) // average and report data
   {
 
@@ -942,6 +950,8 @@ void updateSampleSD()
     pmDataAvg.particles_50um /= blockSize;
     pmDataAvg.particles_100um /= blockSize;
     co2Avg /= blockSize;
+    srawNoxAvg /= blockSize;
+    srawVocAvg /= blockSize;
 
     // update array of recent data points (this is a bit hacky)
 
@@ -1008,7 +1018,11 @@ void updateSampleSD()
       Serial.print(',');
       Serial.print(pmDataAvg.particles_100um);
       Serial.print(',');
-      Serial.println(co2Avg);
+      Serial.print(co2Avg);
+      Serial.print(',');
+      Serial.print(srawNoxAvg);
+      Serial.print(',');
+      Serial.println(srawVocAvg);
 
       dataFile.print(msTimer);
       dataFile.print(',');
@@ -1047,6 +1061,10 @@ void updateSampleSD()
       dataFile.print(pmDataAvg.particles_100um); // >10.0um
       dataFile.print(",");
       dataFile.print(co2Avg);
+      dataFile.print(",");
+      dataFile.print(srawNoxAvg);
+      dataFile.print(",");
+      dataFile.print(srawVocAvg);
       dataFile.print('\n');
       dataFile.close();
 
@@ -1065,6 +1083,8 @@ void updateSampleSD()
       pmDataAvg.particles_50um = 0;
       pmDataAvg.particles_100um = 0;
       co2Avg = 0;
+      srawVocAvg = 0;
+      srawNoxAvg = 0;
       dataDisplayFlag = true;
 
       ledFlag = true;
@@ -1418,9 +1438,9 @@ void createDataFiles()
     if(newFile)
     {
       #ifdef DEBUG_PRINT
-      Serial.print("ms,UTC_timestamp,PM1.0,PM2.5,PM10.0,0.3um,0.5um,1.0um,2.5um,5.0um,10.0um,co2");
+      Serial.print("ms,UTC_timestamp,PM1.0,PM2.5,PM10.0,0.3um,0.5um,1.0um,2.5um,5.0um,10.0um,co2,nox,voc");
       #endif
-      newFile.print("ms,UTC_timestamp,PM1.0,PM2.5,PM10.0,0.3um,0.5um,1.0um,2.5um,5.0um,10.0um,co2\n");
+      newFile.print("ms,UTC_timestamp,PM1.0,PM2.5,PM10.0,0.3um,0.5um,1.0um,2.5um,5.0um,10.0um,co2,nox,voc\n");
     }
     else 
     {
