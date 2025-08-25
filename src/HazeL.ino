@@ -19,7 +19,6 @@
 #include "Seeed_BMP280.h"
 #include "Adafruit_PM25AQI.h"
 #include "s8_uart.h"
-#include <SensirionI2CSgp41.h>
 
 #define DISPLAY_DATA_COUNT 7 // number of most recent points to be displayed during data collection
 #define BLINK_TIME 30 // time in ms between LED blinks on successful write to SD
@@ -90,12 +89,6 @@ void SERCOM0_Handler()
 S8_UART *co2Sensor_uart;
 S8_sensor co2Sensor;
 uint32_t co2Avg = 0;
-
-SensirionI2CSgp41 noxSensor;
-uint16_t defaultRh = 0x8000;
-uint16_t defaultT = 0x6666;
-uint32_t srawVocAvg = 0;
-uint32_t srawNoxAvg = 0;
 
 SdFat SD;
 File dataFile;
@@ -267,41 +260,6 @@ void setup() {
     display.display();
     while(true);
   }
-
-  // Initialize and condition NOx sensor
-  uint16_t condition_s = 10;
-  noxSensor.begin(Wire);
-  uint16_t noxSerialNum[3];
-  uint16_t error = noxSensor.getSerialNumber(noxSerialNum);
-  if (error)
-  {
-    #ifdef DEBUG_PRINT
-    Serial.println("Failed to initialize NOx sensor");
-    #endif
-    display.clearDisplay();
-    updateDisplay("NOx sensor init failed", 32, false);
-    updateDisplay("Reset device", 48, false);
-    display.display();
-    while(true);
-  }
-
-  display.clearDisplay();
-  updateDisplay("Warming NOx sensor...", 32, false);
-  display.display();
-
-  // Preheat sensor plate
-  uint16_t srawVoc;
-  uint16_t srawNox;
-  error = noxSensor.executeConditioning(defaultRh, defaultT, srawVoc);
-  if (error)
-  {
-    display.clearDisplay();
-    updateDisplay("Error conditioning NOx", 32, false);
-    display.display();
-  }
-  delay(condition_s*1000); // allow time to condition
-  noxSensor.measureRawSignals(defaultRh, defaultT, srawVoc, srawNox); // stop conditioning
-  
 
   TPSensor.init();
 
@@ -926,14 +884,6 @@ void updateSampleSD()
   co2Sensor.co2 = co2Sensor_uart->get_co2();
   co2Avg += co2Sensor.co2;
 
-  // Read NOx/VOC sensor
-  uint16_t srawNox  = 0;
-  uint16_t srawVoc = 0;
-  noxSensor.measureRawSignals(defaultRh, defaultT, srawVoc, srawNox);
-  srawNoxAvg += srawNox;
-  srawVocAvg += srawVoc;
-
-
   if (blockCount == blockSize) // average and report data
   {
 
@@ -950,8 +900,6 @@ void updateSampleSD()
     pmDataAvg.particles_50um /= blockSize;
     pmDataAvg.particles_100um /= blockSize;
     co2Avg /= blockSize;
-    srawNoxAvg /= blockSize;
-    srawVocAvg /= blockSize;
 
     // update array of recent data points (this is a bit hacky)
 
@@ -1018,11 +966,7 @@ void updateSampleSD()
       Serial.print(',');
       Serial.print(pmDataAvg.particles_100um);
       Serial.print(',');
-      Serial.print(co2Avg);
-      Serial.print(',');
-      Serial.print(srawNoxAvg);
-      Serial.print(',');
-      Serial.println(srawVocAvg);
+      Serial.println(co2Avg);
 
       dataFile.print(msTimer);
       dataFile.print(',');
@@ -1061,10 +1005,6 @@ void updateSampleSD()
       dataFile.print(pmDataAvg.particles_100um); // >10.0um
       dataFile.print(",");
       dataFile.print(co2Avg);
-      dataFile.print(",");
-      dataFile.print(srawNoxAvg);
-      dataFile.print(",");
-      dataFile.print(srawVocAvg);
       dataFile.print('\n');
       dataFile.close();
 
@@ -1083,8 +1023,6 @@ void updateSampleSD()
       pmDataAvg.particles_50um = 0;
       pmDataAvg.particles_100um = 0;
       co2Avg = 0;
-      srawVocAvg = 0;
-      srawNoxAvg = 0;
       dataDisplayFlag = true;
 
       ledFlag = true;
@@ -1438,9 +1376,9 @@ void createDataFiles()
     if(newFile)
     {
       #ifdef DEBUG_PRINT
-      Serial.print("ms,UTC_timestamp,PM1.0,PM2.5,PM10.0,0.3um,0.5um,1.0um,2.5um,5.0um,10.0um,co2,nox,voc");
+      Serial.print("ms,UTC_timestamp,PM1.0,PM2.5,PM10.0,0.3um,0.5um,1.0um,2.5um,5.0um,10.0um,co2");
       #endif
-      newFile.print("ms,UTC_timestamp,PM1.0,PM2.5,PM10.0,0.3um,0.5um,1.0um,2.5um,5.0um,10.0um,co2,nox,voc\n");
+      newFile.print("ms,UTC_timestamp,PM1.0,PM2.5,PM10.0,0.3um,0.5um,1.0um,2.5um,5.0um,10.0um,co2\n");
     }
     else 
     {
