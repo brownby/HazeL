@@ -242,10 +242,14 @@ void setup() {
     while(true);
   }
 
-    // initialize comms with CO2 sensor
-  SerialCO2.begin(9600);
+  // initialize comms with CO2 sensor
+
   pinPeripheral(2, PIO_SERCOM);
   pinPeripheral(3, PIO_SERCOM);
+  SerialCO2.begin(9600);
+
+  delay(500); // wait for CO2 sensor to boot up
+
   co2Sensor_uart = new S8_UART(SerialCO2);
   co2Sensor_uart->get_firmware_version(co2Sensor.firm_version);
   int len = strlen(co2Sensor.firm_version);
@@ -321,7 +325,7 @@ void loop() {
           #ifdef DEBUG_PRINT
           Serial.println("ls command");
           #endif
-          for (int i = 0; i < fileCount; i++)
+          for (size_t i = 0; i < fileCount; i++)
           {
             Serial.print(allFiles[i]);
             Serial.print('\n');
@@ -345,8 +349,8 @@ void loop() {
           // Create an array for storing all the files in the argument
           char filesToDownload[fileCount][30];
           String fileName = "";
-          uint32_t downloadCount = 0;
-          int i = 0;
+          size_t downloadCount = 0;
+          size_t i = 0;
 
           // Construct array of files to download
           while (i < msg.length())
@@ -376,7 +380,7 @@ void loop() {
           #endif
 
           // Upload each file one by one, terminate with end ETX character
-          for (int i = 0; i < downloadCount; i++)
+          for (size_t i = 0; i < downloadCount; i++)
           {
             #ifdef DEBUG_PRINT
             Serial.print("Uploading file: "); Serial.println(filesToDownload[i]);
@@ -635,12 +639,15 @@ void updateSampleSD()
     msTimer = millis() - dataStartMillis;
   }
 
-  BMP280_temp_t temp;
-  BMP280_press_t press;
+  // BMP280_temp_t temp; - Deprecated struct from old BMP280 library
+  // BMP280_press_t press; - Deprecated struct from old BMP280 library
+  float temp;
+  float press;
 
   if(timestampFlag) // if it is time to get a time stamp
   {
     // read temperature and pressure
+
     temp = TPSensor.getTemperature();
     press = TPSensor.getPressure();
 
@@ -836,14 +843,14 @@ void updateSampleSD()
       }
 
       Serial.print(',');
-      Serial.print(temp.integral); Serial.print('.'); Serial.print(temp.fractional);
+      Serial.print(temp);
       Serial.print(',');
-      Serial.print(press.integral); Serial.print('.'); Serial.println(press.fractional);
+      Serial.print(press);
 
       metaFile.print(',');
-      metaFile.print(temp.integral); metaFile.print('.'); metaFile.print(temp.fractional);
+      metaFile.print(temp);
       metaFile.print(',');
-      metaFile.print(press.integral); metaFile.print('.'); metaFile.print(press.fractional);
+      metaFile.print(press);
       metaFile.print('\n');
       metaFile.close();
     }
@@ -1074,7 +1081,7 @@ void uploadSerial(char * fileName, uint32_t wait)
   File file = SD.open(fileNameExtension, FILE_READ);
   while(file.available())
   {
-    if (file.available() > sizeof(buffer))
+    if ((size_t)file.available() > sizeof(buffer))
     {
       writeLen = sizeof(buffer);
       file.read(buffer, sizeof(buffer));
@@ -1168,7 +1175,8 @@ char createChecksum(char* cmd)
 {
   char checksum = 0;
 
-  for(int i = 0; i < strlen(cmd); i++)
+  size_t len_str = strlen(cmd);
+  for(size_t i = 0; i < len_str; i++)
   {
     checksum = checksum ^ cmd[i];
   }
@@ -1509,7 +1517,7 @@ void updateMenuSelection()
           }
           break;
         case 4: // selecting file from SD card
-          if(currentVertMenuSelection > fileCount - 1) currentVertMenuSelection = fileCount - 1;
+          if(fileCount > 0 && currentVertMenuSelection > (int16_t) fileCount - 1) currentVertMenuSelection = fileCount - 1;
           if(currentVertMenuSelection % 12 == 0 && currentVertMenuSelection != 0 && currentVertMenuSelection != prevVertMenuSelection)
           {
             scroll++;
@@ -2101,7 +2109,7 @@ void displayPage(uint8_t page)
 }
 
 // function for displaying characters to OLED 
-void updateDisplay(char* text, uint8_t height, bool bg)
+void updateDisplay(const char* text, uint8_t height, bool bg)
 {
   // if(clear) display.clearDisplay();
 
